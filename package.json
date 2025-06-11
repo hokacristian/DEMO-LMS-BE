@@ -5,6 +5,7 @@
     "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "vercel-build": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:generate": "npx prisma generate",
     "db:seed": "npx prisma db seed",
