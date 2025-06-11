@@ -1,0 +1,390 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum untuk role user
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+// Enum untuk status assignment
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+// Enum untuk status submission
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  LATE
+}
+
+// Enum untuk semester
+enum Semester {
+  GANJIL
+  GENAP
+}
+
+// Enum untuk tipe notifikasi
+enum NotificationType {
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_UPDATED
+  ASSIGNMENT_DEADLINE_REMINDER
+  MATERIAL_UPLOADED
+  GRADE_PUBLISHED
+  QUIZ_CREATED
+  QUIZ_UPDATED
+}
+
+// Enum untuk tipe question
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  ESSAY
+}
+
+// Enum untuk status quiz
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+// Model User - untuk semua role (admin, guru, siswa)
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  role      UserRole
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi untuk guru
+  teachingClasses TeacherClass[]
+  materials       Material[]
+  assignments     Assignment[]
+  quizzes         Quiz[]
+
+  // Relasi untuk siswa
+  enrollments Enrollment[]
+  submissions Submission[]
+  quizAttempts QuizAttempt[]
+  
+  // Relasi untuk notifikasi
+  notifications UserNotification[]
+
+  @@map("users")
+}
+
+// Model untuk Mata Pelajaran
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relasi
+  classes Class[]
+
+  @@map("subjects")
+}
+
+// Model untuk Periode Akademik (Tahun Ajaran & Semester)
+model AcademicPeriod {
+  id          Int       @id @default(autoincrement())
+  year        String    // e.g., "2024/2025"
+  semester    Semester  // GANJIL atau GENAP
+  isActive    Boolean   @default(false) // Apakah periode ini sedang aktif
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relasi
+  classes Class[]
+
+  @@unique([year, semester]) // Kombinasi tahun dan semester harus unique
+  @@map("academic_periods")
+}
+
+// Model untuk Kelas
+model Class {
+  id               Int      @id @default(autoincrement())
+  name             String
+  description      String?
+  enrollCode       String   @unique // Kode untuk siswa enroll
+  subjectId        Int
+  academicPeriodId Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relasi
+  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod @relation(fields: [academicPeriodId], references: [id], onDelete: Cascade)
+  teachers       TeacherClass[]
+  students       Enrollment[]
+  materials      Material[]
+  assignments    Assignment[]
+  quizzes        Quiz[]
+
+  @@map("classes")
+}
+
+// Junction table untuk relasi many-to-many Teacher dan Class
+model TeacherClass {
+  id        Int      @id @default(autoincrement())
+  teacherId Int
+  classId   Int
+  createdAt DateTime @default(now())
+
+  // Relasi
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId])
+  @@map("teacher_classes")
+}
+
+// Model untuk Enrollment siswa ke kelas
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  classId   Int
+  enrolledAt DateTime @default(now())
+
+  // Relasi
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classId])
+  @@map("enrollments")
+}
+
+// Model untuk Materi
+model Material {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  content     String?  // Text content jika ada
+  fileUrl     String?  // URL file di Supabase Storage
+  fileName    String?  // Nama original file
+  fileSize    Int?     // Size file dalam bytes
+  mimeType    String?  // Type file (pdf, doc, etc)
+  classId     Int
+  teacherId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relasi
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+// Model untuk Tugas/Assignment
+model Assignment {
+  id          Int              @id @default(autoincrement())
+  title       String
+  description String
+  instruction String?          // Instruksi lengkap tugas
+  fileUrl     String?          // File attachment untuk tugas (optional)
+  fileName    String?
+  deadline    DateTime
+  maxScore    Int?             @default(100)
+  status      AssignmentStatus @default(DRAFT) // DRAFT -> PUBLISHED (trigger notification)
+  classId     Int
+  teacherId   Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relasi
+  class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@map("assignments")
+}
+
+// Model untuk Submission tugas oleh siswa
+model Submission {
+  id              Int              @id @default(autoincrement())
+  assignmentId    Int
+  studentId       Int
+  version         Int              @default(1) // Untuk support multiple submission
+  content         String?          // Text submission
+  fileUrl         String?          // File submission di Supabase Storage
+  fileName        String?
+  fileSize        Int?
+  mimeType        String?
+  score           Int?             // Nilai dari guru
+  feedback        String?          // Feedback dari guru
+  status          SubmissionStatus @default(SUBMITTED)
+  isLatest        Boolean          @default(true) // Track submission terbaru
+  submittedAt     DateTime         @default(now())
+  gradedAt        DateTime?        // Kapan dinilai
+  isLate          Boolean          @default(false) // Apakah submission ini terlambat
+  lateByMinutes   Int?             // Berapa menit terlambat dari deadline
+  previousFileUrl String?          // URL file sebelumnya (untuk cleanup)
+
+  // Relasi
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId, studentId, isLatest]) // Untuk query latest submission
+  @@map("submissions")
+}
+
+// Model untuk Notifikasi
+model Notification {
+  id          Int              @id @default(autoincrement())
+  title       String
+  message     String
+  type        NotificationType
+  classId     Int?             // Null jika notifikasi global
+  assignmentId Int?            // Jika terkait assignment
+  materialId  Int?             // Jika terkait material
+  quizId      Int?             // Jika terkait quiz
+  createdAt   DateTime         @default(now())
+  
+  // Relasi untuk tracking siapa saja yang sudah baca
+  userNotifications UserNotification[]
+
+  @@map("notifications")
+}
+
+// Junction table untuk tracking notifikasi yang sudah dibaca user
+model UserNotification {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  notificationId Int
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  // Relasi
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@map("user_notifications")
+}
+
+// Model untuk Quiz
+model Quiz {
+  id           Int        @id @default(autoincrement())
+  title        String
+  description  String?
+  instruction  String?    // Instruksi khusus untuk quiz
+  timeLimit    Int?       // Waktu dalam menit (null = unlimited)
+  deadline     DateTime?  // Deadline quiz (null = no deadline)
+  maxAttempts  Int        @default(1) // Berapa kali siswa bisa attempt
+  maxScore     Int?       @default(100)
+  status       QuizStatus @default(DRAFT)
+  classId      Int
+  teacherId    Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relasi
+  class     Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher   User          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+// Model untuk Soal Quiz
+model QuizQuestion {
+  id          Int          @id @default(autoincrement())
+  quizId      Int
+  question    String       // Teks soal
+  imageUrl    String?      // Gambar soal (optional)
+  type        QuestionType @default(MULTIPLE_CHOICE)
+  points      Int          @default(1) // Point per soal
+  order       Int          // Urutan soal
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relasi
+  quiz    Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+  answers StudentAnswer[]
+
+  @@map("quiz_questions")
+}
+
+// Model untuk Opsi Jawaban
+model QuizOption {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  text       String   // Teks opsi jawaban
+  imageUrl   String?  // Gambar opsi (optional)
+  isCorrect  Boolean  @default(false) // Apakah ini jawaban yang benar
+  order      Int      // Urutan opsi (A, B, C, D)
+  createdAt  DateTime @default(now())
+
+  // Relasi
+  question      QuizQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentAnswers StudentAnswer[]
+
+  @@map("quiz_options")
+}
+
+// Model untuk Attempt Quiz oleh Siswa
+model QuizAttempt {
+  id          Int       @id @default(autoincrement())
+  quizId      Int
+  studentId   Int
+  attemptNumber Int     @default(1) // Attempt ke berapa
+  score       Int?      // Total score yang didapat
+  maxScore    Int?      // Max score yang mungkin
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  timeSpent   Int?      // Waktu yang dihabiskan dalam menit
+  isCompleted Boolean   @default(false)
+
+  // Relasi
+  quiz    Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers StudentAnswer[]
+
+  @@index([quizId, studentId, attemptNumber])
+  @@map("quiz_attempts")
+}
+
+// Model untuk Jawaban Siswa per Soal
+model StudentAnswer {
+  id             Int      @id @default(autoincrement())
+  attemptId      Int
+  questionId     Int
+  selectedOptionId Int?   // Untuk multiple choice
+  textAnswer     String?  // Untuk essay/text answer
+  isCorrect      Boolean? // Apakah jawaban benar (auto calculate untuk MC)
+  points         Int?     // Point yang didapat untuk soal ini
+  answeredAt     DateTime @default(now())
+
+  // Relasi
+  attempt        QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuizOption?  @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId]) // Satu jawaban per soal per attempt
+  @@map("student_answers")
+}
