@@ -1,5 +1,6 @@
 const app = require('./app');
 const prisma = require('./configs/prisma');
+const CronJobs = require('./utils/cronJobs');
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -36,9 +37,22 @@ async function startServer() {
       console.log('🚀 ========================================');
     });
 
+    // Initialize cron jobs in production
+    if (NODE_ENV === 'production') {
+      CronJobs.initializeCronJobs();
+      console.log('⏰ Cron jobs initialized for production');
+    } else {
+      console.log('⏰ Cron jobs disabled in development mode');
+    }
+
     // Graceful shutdown
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+      
+      // Stop cron jobs first
+      if (NODE_ENV === 'production') {
+        CronJobs.stopAllJobs();
+      }
       
       server.close(async () => {
         console.log('🔌 HTTP server closed');

@@ -6,9 +6,14 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const classRoutes = require('./routes/classRoutes');
+const materialRoutes = require('./routes/materialRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Import middleware
 const { authenticate } = require('./middlewares/authMiddleware');
+const { handleMulterError } = require('./middlewares/uploadMiddleware');
 
 const app = express();
 
@@ -50,6 +55,13 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/materials', materialRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+// Add multer error handling middleware
+app.use(handleMulterError);
 
 // Protected route example (untuk testing)
 app.get('/api/protected', authenticate, (req, res) => {
