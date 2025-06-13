@@ -42,42 +42,63 @@ class MaterialController {
    * Create new material (TEACHER only)
    */
   async createMaterial(req, res) {
-  try {
-    // ... validasi sama seperti sebelumnya
-
-    // Handle file upload if exists
-    let fileData = null;
-    if (req.file) {
-      try {
-        // GANTI TODO INI DENGAN ACTUAL UPLOAD!
-        fileData = await uploadService.uploadMaterial(
-          req.file,
-          value.classId,
-          req.user.id
-        );
-        
-        console.log('✅ Material file uploaded:', fileData.fileUrl);
-      } catch (uploadError) {
-        console.error('❌ File upload failed:', uploadError);
-        return res.status(400).json({
+    try {
+      // Only teachers can create materials
+      if (req.user.role !== 'TEACHER') {
+        return res.status(403).json({
           success: false,
-          message: 'Gagal mengupload file: ' + uploadError.message
+          message: 'Hanya guru yang dapat membuat materi'
         });
       }
+
+      // Validate request body
+      const { error, value } = createMaterialSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Data tidak valid',
+          errors: error.details.map(detail => detail.message)
+        });
+      }
+
+      // Handle file upload if exists
+      let fileData = null;
+      if (req.file) {
+        try {
+          // ACTUAL UPLOAD TO SUPABASE!
+          fileData = await uploadService.uploadMaterial(
+            req.file,
+            value.classId,
+            req.user.id
+          );
+          
+          console.log('✅ Material file uploaded:', fileData.fileUrl);
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          return res.status(400).json({
+            success: false,
+            message: 'Gagal mengupload file: ' + uploadError.message
+          });
+        }
+      }
+
+      // Create material
+      const material = await materialService.createMaterial(req.user.id, value, fileData);
+
+      res.status(201).json({
+        success: true,
+        message: 'Materi berhasil ditambahkan',
+        data: { material }
+      });
+    } catch (error) {
+      console.error('Create material error:', error.message);
+      
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Gagal membuat materi'
+      });
     }
-
-    // Create material
-    const material = await materialService.createMaterial(req.user.id, value, fileData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Materi berhasil ditambahkan',
-      data: { material }
-    });
-  } catch (error) {
-    // ... error handling sama seperti sebelumnya
   }
-}
 
   /**
    * Get materials for a class
@@ -170,15 +191,22 @@ class MaterialController {
       // Handle new file upload if exists
       let fileData = null;
       if (req.file) {
-        // TODO: Upload new file to Supabase Storage
-        fileData = {
-          fileUrl: `materials/updated-${Date.now()}-${req.file.originalname}`,
-          fileName: req.file.originalname,
-          fileSize: req.file.size,
-          mimeType: req.file.mimetype
-        };
-        
-        console.log('TODO: Upload updated file to Supabase Storage:', fileData);
+        try {
+          // ACTUAL UPLOAD TO SUPABASE!
+          fileData = await uploadService.uploadMaterial(
+            req.file,
+            null, // We'll get classId from existing material
+            req.user.id
+          );
+          
+          console.log('✅ Updated material file uploaded:', fileData.fileUrl);
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          return res.status(400).json({
+            success: false,
+            message: 'Gagal mengupload file: ' + uploadError.message
+          });
+        }
       }
 
       // Update material
@@ -262,8 +290,7 @@ class MaterialController {
         });
       }
 
-      // TODO: Implement file download from Supabase Storage
-      // For now, just return the file URL
+      // Return the file URL for download
       res.json({
         success: true,
         message: 'URL download berhasil diambil',

@@ -404,7 +404,7 @@ async function main() {
         }
       }),
       prisma.class.upsert({
-        where: { enrollCode: 'INDO12A' },
+        where: { enrollCode: 'INDO12' },
         update: {
           name: 'Bahasa Indonesia 12A',
           description: 'Kelas Bahasa Indonesia untuk siswa kelas 12A',
@@ -414,7 +414,7 @@ async function main() {
         create: {
           name: 'Bahasa Indonesia 12A',
           description: 'Kelas Bahasa Indonesia untuk siswa kelas 12A',
-          enrollCode: 'INDO12A',
+          enrollCode: 'INDO12',
           subjectId: subjects[1].id,
           academicPeriodId: academicPeriod.id
         }
@@ -452,7 +452,7 @@ async function main() {
         }
       }),
       prisma.class.upsert({
-        where: { enrollCode: 'CHEM12A' },
+        where: { enrollCode: 'CHEM12' },
         update: {
           name: 'Kimia 12A',
           description: 'Kelas Kimia untuk siswa kelas 12A',
@@ -462,7 +462,7 @@ async function main() {
         create: {
           name: 'Kimia 12A',
           description: 'Kelas Kimia untuk siswa kelas 12A',
-          enrollCode: 'CHEM12A',
+          enrollCode: 'CHEM12',
           subjectId: subjects[4].id,
           academicPeriodId: academicPeriod.id
         }

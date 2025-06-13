@@ -94,7 +94,7 @@ class AuthService {
     const { password: _, ...userWithoutPassword } = user;
 
     return {
-    //   user: userWithoutPassword,
+      role: user.role,
       token,
       expiresIn: process.env.JWT_EXPIRES_IN || '7d'
     };

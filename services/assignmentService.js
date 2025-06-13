@@ -156,40 +156,48 @@ class AssignmentService {
       whereCondition.status = 'PUBLISHED';
     }
 
+    // Build include object based on user role
+    const includeConfig = {
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
+    };
+
+    // Add _count for teachers only
+    if (userRole === 'TEACHER') {
+      includeConfig._count = {
+        select: {
+          submissions: true
+        }
+      };
+    }
+
+    // Add student's submissions if user is student
+    if (userRole === 'STUDENT') {
+      includeConfig.submissions = {
+        where: {
+          studentId: parseInt(userId),
+          isLatest: true
+        },
+        select: {
+          id: true,
+          version: true,
+          submittedAt: true,
+          score: true,
+          status: true,
+          isLate: true,
+          lateByMinutes: true
+        }
+      };
+    }
+
     const assignments = await prisma.assignment.findMany({
       where: whereCondition,
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        _count: {
-          select: {
-            submissions: userRole === 'TEACHER' ? true : false
-          }
-        },
-        // Include student's submission if user is student
-        ...(userRole === 'STUDENT' && {
-          submissions: {
-            where: {
-              studentId: parseInt(userId),
-              isLatest: true
-            },
-            select: {
-              id: true,
-              version: true,
-              submittedAt: true,
-              score: true,
-              status: true,
-              isLate: true,
-              lateByMinutes: true
-            }
-          }
-        })
-      },
+      include: includeConfig,
       orderBy: {
         deadline: 'asc'
       }
@@ -202,57 +210,62 @@ class AssignmentService {
    * Get single assignment details
    */
   async getAssignmentById(assignmentId, userId, userRole) {
+    // Build include object based on user role
+    const includeConfig = {
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      class: {
+        select: {
+          id: true,
+          name: true,
+          subject: {
+            select: {
+              name: true
+            }
+          }
+        }
+      }
+    };
+
+    // Include submissions for teacher
+    if (userRole === 'TEACHER') {
+      includeConfig.submissions = {
+        where: { isLatest: true },
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          submittedAt: 'desc'
+        }
+      };
+    }
+
+    // Include student's submission if user is student
+    if (userRole === 'STUDENT') {
+      includeConfig.submissions = {
+        where: {
+          studentId: parseInt(userId)
+        },
+        orderBy: {
+          version: 'desc'
+        }
+      };
+    }
+
     const assignment = await prisma.assignment.findUnique({
       where: { id: parseInt(assignmentId) },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            subject: {
-              select: {
-                name: true
-              }
-            }
-          }
-        },
-        // Include submissions for teacher
-        ...(userRole === 'TEACHER' && {
-          submissions: {
-            where: { isLatest: true },
-            include: {
-              student: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              }
-            },
-            orderBy: {
-              submittedAt: 'desc'
-            }
-          }
-        }),
-        // Include student's submission if user is student
-        ...(userRole === 'STUDENT' && {
-          submissions: {
-            where: {
-              studentId: parseInt(userId)
-            },
-            orderBy: {
-              version: 'desc'
-            }
-          }
-        })
-      }
+      include: includeConfig
     });
 
     if (!assignment) {
@@ -363,12 +376,110 @@ class AssignmentService {
       }
     });
 
-    // TODO: Schedule cleanup of previous file if exists
+    // Schedule cleanup of previous file if exists
     if (previousFileUrl) {
+      // TODO: Implement file cleanup from Supabase storage
       console.log('TODO: Schedule cleanup of previous file:', previousFileUrl);
     }
 
     return submission;
+  }
+
+  /**
+   * Update assignment (only for teacher who created it)
+   */
+  async updateAssignment(assignmentId, teacherId, updateData, fileData = null) {
+    const { title, description, instruction, deadline, maxScore } = updateData;
+
+    // Check if assignment exists and teacher owns it
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: parseInt(assignmentId) }
+    });
+
+    if (!assignment) {
+      throw new Error('Tugas tidak ditemukan');
+    }
+
+    if (assignment.teacherId !== parseInt(teacherId)) {
+      throw new Error('Anda tidak memiliki akses untuk mengubah tugas ini');
+    }
+
+    // Prepare update data
+    const updateFields = {
+      ...(title && { title }),
+      ...(description && { description }),
+      ...(instruction && { instruction }),
+      ...(deadline && { deadline: new Date(deadline) }),
+      ...(maxScore && { maxScore: parseInt(maxScore) })
+    };
+
+    // Add file data if new file uploaded
+    if (fileData) {
+      updateFields.fileUrl = fileData.fileUrl;
+      updateFields.fileName = fileData.fileName;
+      
+      // TODO: Delete old file if exists
+      if (assignment.fileUrl) {
+        console.log('TODO: Delete old assignment file:', assignment.fileUrl);
+      }
+    }
+
+    const updatedAssignment = await prisma.assignment.update({
+      where: { id: parseInt(assignmentId) },
+      data: updateFields,
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return updatedAssignment;
+  }
+
+  /**
+   * Delete assignment (only for teacher who created it)
+   */
+  async deleteAssignment(assignmentId, teacherId) {
+    // Check if assignment exists and teacher owns it
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: parseInt(assignmentId) }
+    });
+
+    if (!assignment) {
+      throw new Error('Tugas tidak ditemukan');
+    }
+
+    if (assignment.teacherId !== parseInt(teacherId)) {
+      throw new Error('Anda tidak memiliki akses untuk menghapus tugas ini');
+    }
+
+    // Delete assignment (will cascade delete submissions)
+    await prisma.assignment.delete({
+      where: { id: parseInt(assignmentId) }
+    });
+
+    // TODO: Delete files from storage
+    if (assignment.fileUrl) {
+      console.log('TODO: Delete assignment file from storage:', assignment.fileUrl);
+    }
+
+    return { message: 'Tugas berhasil dihapus' };
   }
 
   /**
@@ -401,100 +512,6 @@ class AssignmentService {
 
     return true;
   }
-// Tambahkan method ini di assignmentService.js
-
-/**
- * Update assignment (only for teacher who created it)
- */
-async updateAssignment(assignmentId, teacherId, updateData, fileData = null) {
-  const { title, description, instruction, deadline, maxScore } = updateData;
-
-  // Check if assignment exists and teacher owns it
-  const assignment = await prisma.assignment.findUnique({
-    where: { id: parseInt(assignmentId) }
-  });
-
-  if (!assignment) {
-    throw new Error('Tugas tidak ditemukan');
-  }
-
-  if (assignment.teacherId !== parseInt(teacherId)) {
-    throw new Error('Anda tidak memiliki akses untuk mengubah tugas ini');
-  }
-
-  // Prepare update data
-  const updateFields = {
-    ...(title && { title }),
-    ...(description && { description }),
-    ...(instruction && { instruction }),
-    ...(deadline && { deadline: new Date(deadline) }),
-    ...(maxScore && { maxScore: parseInt(maxScore) })
-  };
-
-  // Add file data if new file uploaded
-  if (fileData) {
-    updateFields.fileUrl = fileData.fileUrl;
-    updateFields.fileName = fileData.fileName;
-  }
-
-  const updatedAssignment = await prisma.assignment.update({
-    where: { id: parseInt(assignmentId) },
-    data: updateFields,
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          name: true,
-          email: true
-        }
-      },
-      class: {
-        select: {
-          id: true,
-          name: true,
-          subject: {
-            select: {
-              name: true
-            }
-          }
-        }
-      }
-    }
-  });
-
-  return updatedAssignment;
-}
-
-/**
- * Delete assignment (only for teacher who created it)
- */
-async deleteAssignment(assignmentId, teacherId) {
-  // Check if assignment exists and teacher owns it
-  const assignment = await prisma.assignment.findUnique({
-    where: { id: parseInt(assignmentId) }
-  });
-
-  if (!assignment) {
-    throw new Error('Tugas tidak ditemukan');
-  }
-
-  if (assignment.teacherId !== parseInt(teacherId)) {
-    throw new Error('Anda tidak memiliki akses untuk menghapus tugas ini');
-  }
-
-  // Delete assignment (will cascade delete submissions)
-  await prisma.assignment.delete({
-    where: { id: parseInt(assignmentId) }
-  });
-
-  // TODO: Delete files from storage
-  if (assignment.fileUrl) {
-    console.log('TODO: Delete assignment file from storage:', assignment.fileUrl);
-  }
-
-  return { message: 'Tugas berhasil dihapus' };
-}
-
 }
 
 module.exports = new AssignmentService();
