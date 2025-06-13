@@ -1,0 +1,877 @@
+{
+	"info": {
+		"_postman_id": "student-lms-api-collection",
+		"name": "LMS Backend API - STUDENT (Siswa)",
+		"description": "👨‍🎓 **Learning Management System - API untuk SISWA**\n\n📝 **Fitur yang tersedia untuk Siswa:**\n- ✅ Join Kelas dengan Kode Enrollment\n- ✅ Lihat & Download Materi\n- ✅ Lihat & Kerjakan Tugas/Assignment\n- ✅ Submit Jawaban Tugas\n- ✅ Lihat Nilai & Feedback\n- ✅ Terima Notifikasi\n- ✅ Keluar dari Kelas\n\n🔑 **Test Account:**\n- Email: siswa1@lms.com\n- Password: siswa123\n\n🔑 **Class Enrollment Codes:**\n- Math Class: MATH10A\n- English Class: ENG10B\n- IPA Class: IPA11A\n\n🚀 **Getting Started:**\n1. Login dulu untuk dapat token\n2. Join kelas dengan enrollment code\n3. Lihat materi dan tugas\n4. Submit tugas sebelum deadline\n\n⚠️ **Important:**\n- Hanya bisa lihat tugas yang sudah PUBLISHED\n- Bisa submit tugas berkali-kali (versi terbaru yang dinilai)\n- File submission max 50MB",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🟢 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/health",
+							"host": ["{{BASE_URL}}"],
+							"path": ["health"]
+						},
+						"description": "Check if the server is running and healthy"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register New Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    console.log('✅ Student registered successfully');",
+									"    console.log('👤 User:', response.data.user);",
+									"    console.log('⚠️ Now login to get token');",
+									"} else {",
+									"    console.log('❌ Registration failed:', pm.response.text());",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ahmad Budi Siswa\",\n    \"email\": \"ahmad.budi@student.com\",\n    \"password\": \"password123\",\n    \"role\": \"STUDENT\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/register",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login as Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(200)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.token) {",
+									"        pm.environment.set('STUDENT_TOKEN', response.data.token);",
+									"        console.log('✅ Student login successful');",
+									"        console.log('👨‍🎓 Role:', response.data.role);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"siswa1@lms.com\",\n    \"password\": \"siswa123\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/login",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Student Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/profile",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Student Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Ahmad Rizki Updated Name\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/profile",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentPassword\": \"siswa123\",\n    \"newPassword\": \"newpassword123\",\n    \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/change-password",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "change-password"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/logout",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏫 Class Management (Student)",
+			"item": [
+				{
+					"name": "Join Class with Enrollment Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.class) {",
+									"        pm.environment.set('JOINED_CLASS_ID', response.data.class.id);",
+									"        console.log('✅ Successfully joined class:', response.data.class.name);",
+									"        console.log('📚 Subject:', response.data.class.subject.name);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"enrollCode\": \"MATH10A\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/enroll",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "enroll"]
+						},
+						"description": "Join a class using enrollment code provided by teacher"
+					}
+				},
+				{
+					"name": "Join English Class",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"enrollCode\": \"ENG10B\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/enroll",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "enroll"]
+						}
+					}
+				},
+				{
+					"name": "Get My Classes (Student)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes"]
+						},
+						"description": "Get all classes that this student has joined"
+					}
+				},
+				{
+					"name": "Get Class Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "1"]
+						},
+						"description": "Get detailed class information including teachers and classmates"
+					}
+				},
+				{
+					"name": "Leave Class",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/1/leave",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "1", "leave"]
+						},
+						"description": "Leave a class (unenroll)"
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 Materials (Student View)",
+			"item": [
+				{
+					"name": "Get Class Materials",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "classes", "1"]
+						},
+						"description": "Get all materials uploaded by teacher for this class"
+					}
+				},
+				{
+					"name": "Get Material Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "1"]
+						},
+						"description": "Get detailed view of a specific material"
+					}
+				},
+				{
+					"name": "Download Material File",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/1/download",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "1", "download"]
+						},
+						"description": "Get download URL for material file (if available)"
+					}
+				}
+			]
+		},
+		{
+			"name": "📝 Assignments (Student View)",
+			"item": [
+				{
+					"name": "Get Class Assignments (Student View)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "classes", "1"]
+						},
+						"description": "Get all PUBLISHED assignments for this class, including submission status"
+					}
+				},
+				{
+					"name": "Get Assignment Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(200)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.assignment) {",
+									"        pm.environment.set('ASSIGNMENT_ID', response.data.assignment.id);",
+									"        console.log('📝 Assignment:', response.data.assignment.title);",
+									"        console.log('⏰ Deadline:', response.data.assignment.deadline);",
+									"        console.log('📊 Max Score:', response.data.assignment.maxScore);",
+									"        ",
+									"        if (response.data.assignment.submissions && response.data.assignment.submissions.length > 0) {",
+									"            console.log('✅ Already submitted:', response.data.assignment.submissions.length, 'time(s)');",
+									"        } else {",
+									"            console.log('⚠️ Not submitted yet');",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "1"]
+						},
+						"description": "Get detailed assignment info including submission history for this student"
+					}
+				},
+				{
+					"name": "Submit Assignment (Text Only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.submission) {",
+									"        pm.environment.set('SUBMISSION_ID', response.data.submission.id);",
+									"        console.log('✅ Assignment submitted successfully!');",
+									"        console.log('📝 Submission ID:', response.data.submission.id);",
+									"        console.log('🔢 Version:', response.data.submission.version);",
+									"        console.log('⏰ Late status:', response.data.submission.isLate ? 'LATE' : 'ON TIME');",
+									"        ",
+									"        if (response.data.submission.isLate) {",
+									"            console.log('⚠️ Late by:', response.data.submission.lateByMinutes, 'minutes');",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "content",
+									"value": "**JAWABAN QUIZ KALKULUS DIFERENSIAL**\\n\\n**Soal 1:** Tentukan turunan dari f(x) = 3x² + 2x - 5\\n**Jawab:** \\nf'(x) = d/dx(3x² + 2x - 5)\\nf'(x) = 3·2x + 2 - 0\\nf'(x) = 6x + 2\\n\\n**Soal 2:** Jika posisi benda s(t) = t³ - 6t² + 9t, tentukan kecepatan saat t = 2\\n**Jawab:**\\nKecepatan = v(t) = s'(t)\\nv(t) = d/dt(t³ - 6t² + 9t)\\nv(t) = 3t² - 12t + 9\\nPada t = 2:\\nv(2) = 3(2)² - 12(2) + 9\\nv(2) = 12 - 24 + 9 = -3 m/s\\n\\n**Soal 3:** Tentukan nilai maksimum dari f(x) = -x² + 4x + 1\\n**Jawab:**\\nUntuk mencari maksimum, cari f'(x) = 0\\nf'(x) = -2x + 4 = 0\\n-2x = -4\\nx = 2\\n\\nNilai maksimum: f(2) = -(2)² + 4(2) + 1 = -4 + 8 + 1 = 5\\n\\n**Kesimpulan:**\\nSemua soal telah diselesaikan dengan menggunakan konsep turunan fungsi. Terima kasih.",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}/submit",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}", "submit"]
+						},
+						"description": "Submit assignment with text content only"
+					}
+				},
+				{
+					"name": "Submit Assignment (With File)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "content",
+									"value": "Jawaban lengkap untuk tugas trigonometri terlampir dalam file PDF. File berisi:\\n\\n1. Penyelesaian semua soal dengan langkah detail\\n2. Grafik fungsi trigonometri\\n3. Aplikasi dalam contoh nyata\\n\\nMohon koreksinya pak/bu guru. Terima kasih.",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/path/to/jawaban-trigonometri.pdf",
+									"description": "Upload jawaban dalam format PDF/DOC (max 50MB)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}/submit",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}", "submit"]
+						},
+						"description": "Submit assignment with file attachment"
+					}
+				},
+				{
+					"name": "Resubmit Assignment (Update)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "content",
+									"value": "**JAWABAN QUIZ KALKULUS DIFERENSIAL (REVISI)**\\n\\n*Ini adalah submission ke-2 dengan perbaikan*\\n\\n**Soal 1:** Tentukan turunan dari f(x) = 3x² + 2x - 5\\n**Jawab:** \\nf'(x) = 6x + 2 ✅\\n\\n**Soal 2:** Kecepatan saat t = 2\\n**Jawab:** v(2) = -3 m/s ✅\\n\\n**Soal 3:** Nilai maksimum f(x) = -x² + 4x + 1\\n**Jawab:** Maksimum di x = 2 dengan nilai f(2) = 5 ✅\\n\\n**TAMBAHAN SOAL BONUS:**\\n**Soal 4:** Tentukan turunan kedua dari f(x) = x⁴ - 3x³ + 2x²\\n**Jawab:**\\nf'(x) = 4x³ - 9x² + 4x\\nf''(x) = 12x² - 18x + 4\\n\\n**Perbaikan yang dilakukan:**\\n- Menambahkan soal bonus\\n- Memperjelas langkah-langkah\\n- Menambahkan verifikasi jawaban\\n\\nTerima kasih atas kesempatan revisi ini! 🙏",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}/submit",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}", "submit"]
+						},
+						"description": "Resubmit assignment (creates new version). Previous submission becomes inactive."
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications (Student)",
+			"item": [
+				{
+					"name": "Get My Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications?page=1&limit=15",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Get all notifications for this student"
+					}
+				},
+				{
+					"name": "Get Unread Notification Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/unread-count",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "unread-count"]
+						},
+						"description": "Get count of unread notifications (for badge/counter)"
+					}
+				},
+				{
+					"name": "Get Assignment Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/type/ASSIGNMENT_CREATED",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "type", "ASSIGNMENT_CREATED"]
+						},
+						"description": "Get notifications about new assignments"
+					}
+				},
+				{
+					"name": "Get Material Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/type/MATERIAL_UPLOADED",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "type", "MATERIAL_UPLOADED"]
+						},
+						"description": "Get notifications about new materials"
+					}
+				},
+				{
+					"name": "Get Deadline Reminders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/type/ASSIGNMENT_DEADLINE_REMINDER",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "type", "ASSIGNMENT_DEADLINE_REMINDER"]
+						},
+						"description": "Get deadline reminder notifications"
+					}
+				},
+				{
+					"name": "Get Class Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/class/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "class", "1"]
+						},
+						"description": "Get all notifications for a specific class"
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/1/read",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "1", "read"]
+						},
+						"description": "Mark a specific notification as read"
+					}
+				},
+				{
+					"name": "Mark All Notifications as Read",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/mark-all-read",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "mark-all-read"]
+						},
+						"description": "Mark all notifications as read"
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Test Scenarios",
+			"item": [
+				{
+					"name": "Try to Create Class (Should Fail)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Unauthorized Class by Student\",\n    \"description\": \"This should fail - students can't create classes\",\n    \"subjectId\": 1,\n    \"academicPeriodId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes"]
+						},
+						"description": "This should return 403 Forbidden - students cannot create classes"
+					}
+				},
+				{
+					"name": "Try to Create Material (Should Fail)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Unauthorized Material\",\n    \"description\": \"Students shouldn't be able to create materials\",\n    \"content\": \"This should fail\",\n    \"classId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials"]
+						},
+						"description": "This should return 403 Forbidden - students cannot create materials"
+					}
+				},
+				{
+					"name": "Try to Access Draft Assignment (Should Fail)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/999",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "999"]
+						},
+						"description": "Students can only see PUBLISHED assignments, not DRAFT ones"
+					}
+				},
+				{
+					"name": "Try Invalid Enrollment Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"enrollCode\": \"INVALID123\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/enroll",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "enroll"]
+						},
+						"description": "Should return error for invalid enrollment code"
+					}
+				},
+				{
+					"name": "Try to Submit to Non-existent Assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{STUDENT_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "content",
+									"value": "This should fail",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/999/submit",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "999", "submit"]
+						},
+						"description": "Should return 404 for non-existent assignment"
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('👨‍🎓 Student Request:', pm.request.method, pm.request.url);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('📊 Response Status:', pm.response.code);",
+					"if (pm.response.code >= 400) {",
+					"    console.log('❌ Error Response:', pm.response.text());",
+					"} else if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    console.log('✅ Success!');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

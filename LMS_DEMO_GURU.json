@@ -1,0 +1,893 @@
+{
+	"info": {
+		"_postman_id": "teacher-lms-api-collection",
+		"name": "LMS Backend API - TEACHER (Guru)",
+		"description": "🧑‍🏫 **Learning Management System - API untuk GURU**\n\n📝 **Fitur yang tersedia untuk Guru:**\n- ✅ Manajemen Kelas (Create, Update, View Students)\n- ✅ Upload & Kelola Materi\n- ✅ Buat & Kelola Tugas/Assignment\n- ✅ Review & Nilai Submission Siswa\n- ✅ Lihat Notifikasi\n- ✅ Statistik & Analytics\n\n🔑 **Test Account:**\n- Email: guru.matematika@lms.com\n- Password: guru123\n\n🚀 **Getting Started:**\n1. Login dulu untuk dapat token\n2. Token otomatis disimpan di environment\n3. Test semua endpoint sesuai urutan\n\n⚠️ **Important:**\n- Semua endpoint butuh Authentication (Bearer Token)\n- Role TEACHER wajib untuk fitur-fitur khusus guru",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🟢 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/health",
+							"host": ["{{BASE_URL}}"],
+							"path": ["health"]
+						},
+						"description": "Check if the server is running and healthy"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Login as Teacher",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(200)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.token) {",
+									"        pm.environment.set('TEACHER_TOKEN', response.data.token);",
+									"        console.log('✅ Teacher login successful');",
+									"        console.log('👨‍🏫 Role:', response.data.role);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"guru.matematika@lms.com\",\n    \"password\": \"guru123\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/login",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Teacher Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/profile",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Teacher Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Pak Budi Matematika Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/profile",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentPassword\": \"guru123\",\n    \"newPassword\": \"newpassword123\",\n    \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/change-password",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "change-password"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/auth/logout",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏫 Class Management (Teacher)",
+			"item": [
+				{
+					"name": "Create New Class",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.class) {",
+									"        pm.environment.set('CLASS_ID', response.data.class.id);",
+									"        pm.environment.set('ENROLL_CODE', response.data.class.enrollCode);",
+									"        console.log('✅ Class created with ID:', response.data.class.id);",
+									"        console.log('🔑 Enrollment code for students:', response.data.class.enrollCode);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Matematika Kelas 12 IPA\",\n    \"description\": \"Kelas matematika untuk siswa kelas 12 IPA semester ganjil. Materi meliputi kalkulus, trigonometri lanjut, dan statistika.\",\n    \"subjectId\": 1,\n    \"academicPeriodId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes"]
+						}
+					}
+				},
+				{
+					"name": "Get My Classes (Teacher)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes"]
+						},
+						"description": "Get all classes that this teacher is teaching"
+					}
+				},
+				{
+					"name": "Get Class Details & Students",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "1"]
+						},
+						"description": "Get detailed class information including enrolled students"
+					}
+				},
+				{
+					"name": "Get Class Students List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/1/students",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "1", "students"]
+						},
+						"description": "Get list of students enrolled in this class"
+					}
+				},
+				{
+					"name": "Update Class",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Matematika Kelas 12 IPA - Updated\",\n    \"description\": \"Deskripsi kelas yang sudah diperbarui dengan materi tambahan untuk persiapan ujian nasional.\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "classes", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 Materials Management",
+			"item": [
+				{
+					"name": "Create Material (Text Only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.material) {",
+									"        pm.environment.set('MATERIAL_ID', response.data.material.id);",
+									"        console.log('✅ Material created with ID:', response.data.material.id);",
+									"        console.log('📚 Title:', response.data.material.title);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Pengenalan Kalkulus Diferensial\",\n    \"description\": \"Materi dasar tentang turunan fungsi dan aplikasinya dalam kehidupan sehari-hari\",\n    \"content\": \"## Kalkulus Diferensial\\n\\n### Pengertian Turunan\\nTurunan adalah limit dari perbandingan perubahan nilai fungsi terhadap perubahan variabel bebasnya.\\n\\n### Rumus Dasar:\\n- Turunan konstanta: d/dx(c) = 0\\n- Turunan x^n: d/dx(x^n) = nx^(n-1)\\n- Turunan sin x: d/dx(sin x) = cos x\\n- Turunan cos x: d/dx(cos x) = -sin x\\n\\n### Aplikasi:\\n1. Mencari kecepatan (turunan pertama jarak)\\n2. Mencari percepatan (turunan kedua jarak)\\n3. Optimisasi (maksimum dan minimum)\\n\\n### Contoh Soal:\\nJika f(x) = 3x² + 2x - 5, maka f'(x) = 6x + 2\",\n    \"classId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials"]
+						},
+						"description": "Create material with text content only. Notification will be sent to all students in the class automatically."
+					}
+				},
+				{
+					"name": "Create Material with File",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Materi Trigonometri Lengkap",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Materi lengkap trigonometri dengan contoh soal dan pembahasan",
+									"type": "text"
+								},
+								{
+									"key": "content",
+									"value": "Silakan download file PDF terlampir untuk materi trigonometri lengkap. File berisi:\\n\\n1. Pengertian trigonometri\\n2. Rumus-rumus dasar\\n3. Identitas trigonometri\\n4. Grafik fungsi trigonometri\\n5. Aplikasi dalam kehidupan nyata\\n6. 50+ soal latihan dengan pembahasan",
+									"type": "text"
+								},
+								{
+									"key": "classId",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/path/to/trigonometri.pdf",
+									"description": "Upload PDF, DOC, PPT, atau file lainnya (max 50MB)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials"]
+						},
+						"description": "Create material with file attachment. File will be uploaded to Supabase Storage."
+					}
+				},
+				{
+					"name": "Get Class Materials",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "classes", "1"]
+						},
+						"description": "Get all materials for a specific class"
+					}
+				},
+				{
+					"name": "Get Material Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/{{MATERIAL_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "{{MATERIAL_ID}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Material",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Kalkulus Diferensial - Updated\",\n    \"description\": \"Materi yang sudah diperbarui dengan contoh soal tambahan\",\n    \"content\": \"## Kalkulus Diferensial (Updated)\\n\\n[Previous content]...\\n\\n### Update: Contoh Soal Tambahan\\n\\n**Soal 1:** Tentukan turunan dari f(x) = 5x³ - 2x² + 7x - 3\\n**Jawab:** f'(x) = 15x² - 4x + 7\\n\\n**Soal 2:** Jika posisi benda s(t) = 2t³ - 6t² + 4t, tentukan kecepatan saat t = 2\\n**Jawab:** v(t) = s'(t) = 6t² - 12t + 4, maka v(2) = 24 - 24 + 4 = 4 m/s\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/{{MATERIAL_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "{{MATERIAL_ID}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Material",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/{{MATERIAL_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "{{MATERIAL_ID}}"]
+						},
+						"description": "Delete material. Associated files will also be deleted from storage."
+					}
+				},
+				{
+					"name": "Get Material Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/materials/stats/teacher",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "materials", "stats", "teacher"]
+						},
+						"description": "Get statistics about materials created by this teacher"
+					}
+				}
+			]
+		},
+		{
+			"name": "📝 Assignment Management",
+			"item": [
+				{
+					"name": "Create Assignment (Draft)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(201)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.assignment) {",
+									"        pm.environment.set('ASSIGNMENT_ID', response.data.assignment.id);",
+									"        console.log('✅ Assignment created with ID:', response.data.assignment.id);",
+									"        console.log('📋 Status:', response.data.assignment.status);",
+									"        console.log('⚠️ Remember to PUBLISH the assignment to notify students!');",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Quiz Kalkulus Diferensial",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Kerjakan soal-soal kalkulus diferensial berikut dengan langkah-langkah yang jelas dan teliti",
+									"type": "text"
+								},
+								{
+									"key": "instruction",
+									"value": "**PETUNJUK PENGERJAAN:**\\n\\n1. Baca setiap soal dengan teliti\\n2. Tunjukkan langkah-langkah penyelesaian dengan jelas\\n3. Gunakan rumus yang tepat\\n4. Berikan kesimpulan pada setiap jawaban\\n5. Upload jawaban dalam format PDF atau tulis di kolom submission\\n6. Deadline: 7 hari dari tanggal publish\\n\\n**NILAI:**\\n- Langkah penyelesaian: 60%\\n- Jawaban akhir: 30%\\n- Kerapihan: 10%",
+									"type": "text"
+								},
+								{
+									"key": "deadline",
+									"value": "2024-12-31T23:59:59.000Z",
+									"type": "text"
+								},
+								{
+									"key": "maxScore",
+									"value": "100",
+									"type": "text"
+								},
+								{
+									"key": "classId",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments"]
+						},
+						"description": "Create assignment in DRAFT status. Students won't see it until published."
+					}
+				},
+				{
+					"name": "Create Assignment with File",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Tugas Besar Trigonometri",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Tugas besar tentang aplikasi trigonometri dalam kehidupan nyata",
+									"type": "text"
+								},
+								{
+									"key": "instruction",
+									"value": "Kerjakan soal-soal dalam file PDF yang terlampir. Format pengumpulan bisa berupa PDF atau langsung ditulis di submission.",
+									"type": "text"
+								},
+								{
+									"key": "deadline",
+									"value": "2025-01-15T23:59:59.000Z",
+									"type": "text"
+								},
+								{
+									"key": "maxScore",
+									"value": "150",
+									"type": "text"
+								},
+								{
+									"key": "classId",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "attachment",
+									"type": "file",
+									"src": "/path/to/soal-trigonometri.pdf",
+									"description": "Attachment berisi soal-soal"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments"]
+						}
+					}
+				},
+				{
+					"name": "Publish Assignment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}/publish",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}", "publish"]
+						},
+						"description": "Publish assignment from DRAFT to PUBLISHED. This will automatically send notifications to all students in the class."
+					}
+				},
+				{
+					"name": "Get Class Assignments (Teacher View)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/classes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "classes", "1"]
+						},
+						"description": "Get all assignments for a class (including DRAFT assignments). Shows submission count for each assignment."
+					}
+				},
+				{
+					"name": "Get Assignment Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}"]
+						},
+						"description": "Get detailed assignment information including all submissions from students"
+					}
+				},
+				{
+					"name": "Get Assignment Submissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}/submissions",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}", "submissions"]
+						},
+						"description": "Get all student submissions for this assignment"
+					}
+				},
+				{
+					"name": "Grade Student Submission",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.to.have.status(200)) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.submission) {",
+									"        console.log('✅ Submission graded successfully');",
+									"        console.log('📊 Score:', response.data.submission.score);",
+									"        console.log('👤 Student:', response.data.submission.student.name);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"score\": 85,\n    \"feedback\": \"Jawaban sudah benar dan langkah-langkah penyelesaian cukup jelas. Beberapa hal yang perlu diperbaiki:\\n\\n✅ **Yang sudah bagus:**\\n- Rumus yang digunakan tepat\\n- Langkah penyelesaian sistematis\\n- Jawaban akhir benar\\n\\n📝 **Yang perlu diperbaiki:**\\n- Tulisan bisa lebih rapi\\n- Perlu ditambahkan kesimpulan\\n- Beberapa langkah bisa dijelaskan lebih detail\\n\\n🎯 **Saran untuk kedepan:**\\nCoba latihan soal serupa untuk meningkatkan kecepatan dan ketelitian. Overall good job! 👍\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/submissions/1/grade",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "submissions", "1", "grade"]
+						},
+						"description": "Grade a student's submission. Change submission ID as needed."
+					}
+				},
+				{
+					"name": "Update Assignment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Quiz Kalkulus Diferensial - Updated",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Deskripsi yang sudah diperbarui dengan penambahan soal bonus",
+									"type": "text"
+								},
+								{
+									"key": "maxScore",
+									"value": "120",
+									"type": "text",
+									"description": "Increased due to bonus questions"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Assignment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/assignments/{{ASSIGNMENT_ID}}",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "assignments", "{{ASSIGNMENT_ID}}"]
+						},
+						"description": "Delete assignment. This will also delete all associated submissions and files."
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications",
+			"item": [
+				{
+					"name": "Get My Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications?page=1&limit=10",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/unread-count",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "unread-count"]
+						}
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/1/read",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "1", "read"]
+						}
+					}
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{TEACHER_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/notifications/mark-all-read",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "notifications", "mark-all-read"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('🧑‍🏫 Teacher Request:', pm.request.method, pm.request.url);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"console.log('📊 Response Status:', pm.response.code);",
+					"if (pm.response.code >= 400) {",
+					"    console.log('❌ Error Response:', pm.response.text());",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
