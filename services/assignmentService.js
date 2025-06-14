@@ -2,7 +2,6 @@ const prisma = require('../configs/prisma');
 const notificationService = require('./notificationService');
 const uploadService = require('./uploadService');
 
-
 class AssignmentService {
   /**
    * Create new assignment (only for TEACHER)
@@ -139,6 +138,289 @@ class AssignmentService {
     await notificationService.createAssignmentNotification(assignment.classId, publishedAssignment);
 
     return publishedAssignment;
+  }
+
+  /**
+   * Get all assignments from all student's classes
+   */
+  async getAllStudentAssignments(studentId, options = {}) {
+    const {
+      status = 'all', // 'all', 'submitted', 'pending', 'overdue'
+      sortBy = 'deadline', // 'deadline', 'created', 'class'
+      sortOrder = 'asc', // 'asc', 'desc'
+      limit = null,
+      offset = 0
+    } = options;
+
+    // Get all classes where student is enrolled
+    const enrollments = await prisma.enrollment.findMany({
+      where: { studentId: parseInt(studentId) },
+      select: { classId: true }
+    });
+
+    const classIds = enrollments.map(enrollment => enrollment.classId);
+
+    if (classIds.length === 0) {
+      return [];
+    }
+
+    // Build where condition
+    const whereCondition = {
+      classId: { in: classIds },
+      status: 'PUBLISHED' // Only published assignments
+    };
+
+    // Build include object
+    const includeConfig = {
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      class: {
+        select: {
+          id: true,
+          name: true,
+          subject: {
+            select: {
+              name: true
+            }
+          }
+        }
+      },
+      submissions: {
+        where: {
+          studentId: parseInt(studentId),
+          isLatest: true
+        },
+        select: {
+          id: true,
+          version: true,
+          submittedAt: true,
+          score: true,
+          status: true,
+          isLate: true,
+          lateByMinutes: true,
+          feedback: true
+        }
+      }
+    };
+
+    // Build orderBy
+    let orderBy = {};
+    switch (sortBy) {
+      case 'created':
+        orderBy = { createdAt: sortOrder };
+        break;
+      case 'class':
+        orderBy = { class: { name: sortOrder } };
+        break;
+      case 'deadline':
+      default:
+        orderBy = { deadline: sortOrder };
+        break;
+    }
+
+    // Build query options
+    const queryOptions = {
+      where: whereCondition,
+      include: includeConfig,
+      orderBy
+    };
+
+    if (limit) {
+      queryOptions.take = parseInt(limit);
+      queryOptions.skip = parseInt(offset);
+    }
+
+    // Get assignments
+    let assignments = await prisma.assignment.findMany(queryOptions);
+
+    // Filter by status if needed
+    if (status !== 'all') {
+      const now = new Date();
+      
+      assignments = assignments.filter(assignment => {
+        const hasSubmission = assignment.submissions.length > 0;
+        const isOverdue = now > assignment.deadline;
+        
+        switch (status) {
+          case 'submitted':
+            return hasSubmission;
+          case 'pending':
+            return !hasSubmission && !isOverdue;
+          case 'overdue':
+            return !hasSubmission && isOverdue;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Add computed fields
+    const now = new Date();
+    assignments = assignments.map(assignment => {
+      const hasSubmission = assignment.submissions.length > 0;
+      const submission = hasSubmission ? assignment.submissions[0] : null;
+      const isOverdue = now > assignment.deadline;
+      const daysUntilDeadline = Math.ceil((assignment.deadline - now) / (1000 * 60 * 60 * 24));
+      
+      return {
+        ...assignment,
+        computed: {
+          hasSubmission,
+          isOverdue: !hasSubmission && isOverdue,
+          daysUntilDeadline,
+          submissionStatus: hasSubmission ? 'submitted' : (isOverdue ? 'overdue' : 'pending'),
+          score: submission?.score || null,
+          submittedAt: submission?.submittedAt || null,
+          isLate: submission?.isLate || false,
+          feedback: submission?.feedback || null
+        }
+      };
+    });
+
+    return assignments;
+  }
+
+  /**
+   * Get all graded assignments for student (NEW FEATURE)
+   */
+  async getAllStudentGrades(studentId, options = {}) {
+    const {
+      sortBy = 'deadline', // 'grade', 'deadline', 'class', 'submitted'
+      sortOrder = 'desc', // 'asc', 'desc'
+      limit = null,
+      offset = 0,
+      classId = null
+    } = options;
+
+    // Get all classes where student is enrolled
+    const enrollments = await prisma.enrollment.findMany({
+      where: { 
+        studentId: parseInt(studentId),
+        ...(classId && { classId: parseInt(classId) })
+      },
+      select: { classId: true }
+    });
+
+    const classIds = enrollments.map(enrollment => enrollment.classId);
+
+    if (classIds.length === 0) {
+      return { grades: [], total: 0 };
+    }
+
+    // Build where condition
+    const whereCondition = {
+      studentId: parseInt(studentId),
+      isLatest: true,
+      score: { not: null }, // Only graded submissions
+      assignment: {
+        classId: { in: classIds },
+        status: 'PUBLISHED'
+      }
+    };
+
+    // Build include object
+    const includeConfig = {
+      assignment: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          deadline: true,
+          maxScore: true,
+          class: {
+            select: {
+              id: true,
+              name: true,
+              subject: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      }
+    };
+
+    // Build orderBy
+    let orderBy = {};
+    switch (sortBy) {
+      case 'grade':
+        orderBy = { score: sortOrder };
+        break;
+      case 'class':
+        orderBy = { assignment: { class: { name: sortOrder } } };
+        break;
+      case 'submitted':
+        orderBy = { submittedAt: sortOrder };
+        break;
+      case 'deadline':
+      default:
+        orderBy = { assignment: { deadline: sortOrder } };
+        break;
+    }
+
+    // Get total count first
+    const totalCount = await prisma.submission.count({
+      where: whereCondition
+    });
+
+    // Build query options
+    const queryOptions = {
+      where: whereCondition,
+      include: includeConfig,
+      orderBy
+    };
+
+    if (limit) {
+      queryOptions.take = parseInt(limit);
+      queryOptions.skip = parseInt(offset);
+    }
+
+    // Get graded submissions
+    const submissions = await prisma.submission.findMany(queryOptions);
+
+    // Format the response
+    const grades = submissions.map(submission => {
+      const percentage = (submission.score / submission.assignment.maxScore) * 100;
+      
+      return {
+        id: submission.id,
+        score: submission.score,
+        maxScore: submission.assignment.maxScore,
+        percentage: Math.round(percentage * 100) / 100,
+        feedback: submission.feedback,
+        submittedAt: submission.submittedAt,
+        gradedAt: submission.gradedAt,
+        isLate: submission.isLate,
+        lateByMinutes: submission.lateByMinutes,
+        assignment: {
+          id: submission.assignment.id,
+          title: submission.assignment.title,
+          description: submission.assignment.description,
+          deadline: submission.assignment.deadline,
+          class: submission.assignment.class,
+          teacher: submission.assignment.teacher
+        }
+      };
+    });
+
+    return {
+      grades,
+      total: totalCount
+    };
   }
 
   /**

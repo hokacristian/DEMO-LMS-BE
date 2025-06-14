@@ -3,8 +3,7 @@ const assignmentService = require('../services/assignmentService');
 const prisma = require('../configs/prisma');
 const uploadService = require('../services/uploadService');
 
-
-// Validation schemas (sama seperti sebelumnya)
+// Validation schemas
 const createAssignmentSchema = Joi.object({
   title: Joi.string().min(2).max(200).required().messages({
     'string.min': 'Judul tugas minimal 2 karakter',
@@ -62,68 +61,85 @@ const submitAssignmentSchema = Joi.object({
   })
 });
 
+const getAllStudentAssignmentsSchema = Joi.object({
+  status: Joi.string().valid('all', 'submitted', 'pending', 'overdue').default('all'),
+  sortBy: Joi.string().valid('deadline', 'created', 'class').default('deadline'),
+  sortOrder: Joi.string().valid('asc', 'desc').default('asc'),
+  limit: Joi.number().integer().min(1).max(100),
+  page: Joi.number().integer().min(1).default(1)
+});
+
+const getAllStudentGradesSchema = Joi.object({
+  sortBy: Joi.string().valid('grade', 'deadline', 'class', 'submitted').default('deadline'),
+  sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
+  limit: Joi.number().integer().min(1).max(100),
+  page: Joi.number().integer().min(1).default(1),
+  classId: Joi.number().integer().positive().optional().messages({
+    'number.positive': 'Class ID harus berupa angka positif'
+  })
+});
+
 class AssignmentController {
   /**
    * Create new assignment (TEACHER only)
    */
   async createAssignment(req, res) {
-  try {
-    // Only teachers can create assignments
-    if (req.user.role !== 'TEACHER') {
-      return res.status(403).json({
-        success: false,
-        message: 'Hanya guru yang dapat membuat tugas'
-      });
-    }
-
-    // Validate request body
-    const { error, value } = createAssignmentSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: 'Data tidak valid',
-        errors: error.details.map(detail => detail.message)
-      });
-    }
-
-    // Handle file upload if exists
-    let fileData = null;
-    if (req.file) {
-      try {
-        // GANTI TODO INI DENGAN ACTUAL UPLOAD!
-        fileData = await uploadService.uploadAssignmentAttachment(
-          req.file,
-          value.classId,
-          req.user.id
-        );
-        
-        console.log('✅ Assignment file uploaded:', fileData.fileUrl);
-      } catch (uploadError) {
-        console.error('❌ File upload failed:', uploadError);
-        return res.status(400).json({
+    try {
+      // Only teachers can create assignments
+      if (req.user.role !== 'TEACHER') {
+        return res.status(403).json({
           success: false,
-          message: 'Gagal mengupload file: ' + uploadError.message
+          message: 'Hanya guru yang dapat membuat tugas'
         });
       }
+
+      // Validate request body
+      const { error, value } = createAssignmentSchema.validate(req.body);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Data tidak valid',
+          errors: error.details.map(detail => detail.message)
+        });
+      }
+
+      // Handle file upload if exists
+      let fileData = null;
+      if (req.file) {
+        try {
+          fileData = await uploadService.uploadAssignmentAttachment(
+            req.file,
+            value.classId,
+            req.user.id
+          );
+          
+          console.log('✅ Assignment file uploaded:', fileData.fileUrl);
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          return res.status(400).json({
+            success: false,
+            message: 'Gagal mengupload file: ' + uploadError.message
+          });
+        }
+      }
+
+      // Create assignment
+      const assignment = await assignmentService.createAssignment(req.user.id, value, fileData);
+
+      res.status(201).json({
+        success: true,
+        message: 'Tugas berhasil dibuat (status: DRAFT)',
+        data: { assignment }
+      });
+    } catch (error) {
+      console.error('Create assignment error:', error.message);
+      
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Gagal membuat tugas'
+      });
     }
-
-    // Create assignment
-    const assignment = await assignmentService.createAssignment(req.user.id, value, fileData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Tugas berhasil dibuat (status: DRAFT)',
-      data: { assignment }
-    });
-  } catch (error) {
-    console.error('Create assignment error:', error.message);
-    
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Gagal membuat tugas'
-    });
   }
-}
 
   /**
    * Publish assignment (change from DRAFT to PUBLISHED)
@@ -159,6 +175,160 @@ class AssignmentController {
       res.status(statusCode).json({
         success: false,
         message: error.message || 'Gagal mempublikasi tugas'
+      });
+    }
+  }
+
+  /**
+   * Get all assignments from all student's classes (NEW FEATURE)
+   */
+  async getAllStudentAssignments(req, res) {
+    try {
+      // Only students can use this endpoint
+      if (req.user.role !== 'STUDENT') {
+        return res.status(403).json({
+          success: false,
+          message: 'Endpoint ini hanya untuk siswa'
+        });
+      }
+
+      // Validate query parameters
+      const { error, value } = getAllStudentAssignmentsSchema.validate(req.query);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parameter tidak valid',
+          errors: error.details.map(detail => detail.message)
+        });
+      }
+
+      const { status, sortBy, sortOrder, limit, page } = value;
+      
+      // Calculate offset for pagination
+      const offset = limit ? (page - 1) * limit : 0;
+
+      // Get assignments
+      const assignments = await assignmentService.getAllStudentAssignments(
+        req.user.id,
+        {
+          status,
+          sortBy,
+          sortOrder,
+          limit,
+          offset
+        }
+      );
+
+      // Calculate pagination info
+      const totalAssignments = assignments.length;
+      const hasMore = limit ? totalAssignments === limit : false;
+
+      // Group assignments by status for summary
+      const summary = {
+        total: totalAssignments,
+        submitted: assignments.filter(a => a.computed.submissionStatus === 'submitted').length,
+        pending: assignments.filter(a => a.computed.submissionStatus === 'pending').length,
+        overdue: assignments.filter(a => a.computed.submissionStatus === 'overdue').length,
+        graded: assignments.filter(a => a.computed.score !== null).length
+      };
+
+      res.json({
+        success: true,
+        message: 'Semua tugas berhasil diambil',
+        data: {
+          assignments,
+          summary,
+          filters: {
+            status,
+            sortBy,
+            sortOrder
+          },
+          pagination: limit ? {
+            page,
+            limit,
+            total: totalAssignments,
+            hasMore
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error('Get all student assignments error:', error.message);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Gagal mengambil semua tugas'
+      });
+    }
+  }
+
+  /**
+   * Get all graded assignments for student (NEW FEATURE)
+   */
+  async getAllStudentGrades(req, res) {
+    try {
+      // Only students can use this endpoint
+      if (req.user.role !== 'STUDENT') {
+        return res.status(403).json({
+          success: false,
+          message: 'Endpoint ini hanya untuk siswa'
+        });
+      }
+
+      // Validate query parameters
+      const { error, value } = getAllStudentGradesSchema.validate(req.query);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parameter tidak valid',
+          errors: error.details.map(detail => detail.message)
+        });
+      }
+
+      const { sortBy, sortOrder, limit, page, classId } = value;
+      
+      // Calculate offset for pagination
+      const offset = limit ? (page - 1) * limit : 0;
+
+      // Get graded assignments
+      const grades = await assignmentService.getAllStudentGrades(
+        req.user.id,
+        {
+          sortBy,
+          sortOrder,
+          limit,
+          offset,
+          classId
+        }
+      );
+
+      // Calculate statistics
+      const gradeStats = calculateGradeStats(grades.grades);
+
+      res.json({
+        success: true,
+        message: 'Daftar nilai berhasil diambil',
+        data: {
+          grades: grades.grades,
+          statistics: gradeStats,
+          filters: {
+            sortBy,
+            sortOrder,
+            classId: classId || 'all'
+          },
+          pagination: limit ? {
+            page,
+            limit,
+            total: grades.total,
+            hasMore: grades.grades.length === limit
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error('Get all student grades error:', error.message);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Gagal mengambil daftar nilai'
       });
     }
   }
@@ -228,7 +398,7 @@ class AssignmentController {
   }
 
   /**
-   * Update assignment (only for teacher who created it) - INI YANG MISSING!
+   * Update assignment (only for teacher who created it)
    */
   async updateAssignment(req, res) {
     try {
@@ -255,13 +425,21 @@ class AssignmentController {
       // Handle new file upload if exists
       let fileData = null;
       if (req.file) {
-        // TODO: Upload new file to Supabase Storage
-        fileData = {
-          fileUrl: `assignments/attachments/updated-${Date.now()}-${req.file.originalname}`,
-          fileName: req.file.originalname
-        };
-        
-        console.log('TODO: Upload updated assignment file to Supabase Storage:', fileData);
+        try {
+          fileData = await uploadService.uploadAssignmentAttachment(
+            req.file,
+            null, // We'll get classId from existing assignment
+            req.user.id
+          );
+          
+          console.log('✅ Updated assignment file uploaded:', fileData.fileUrl);
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          return res.status(400).json({
+            success: false,
+            message: 'Gagal mengupload file: ' + uploadError.message
+          });
+        }
       }
 
       // Update assignment
@@ -291,7 +469,7 @@ class AssignmentController {
   }
 
   /**
-   * Delete assignment (only for teacher who created it) - INI JUGA MISSING!
+   * Delete assignment (only for teacher who created it)
    */
   async deleteAssignment(req, res) {
     try {
@@ -352,15 +530,21 @@ class AssignmentController {
       // Handle file upload if exists
       let fileData = null;
       if (req.file) {
-        // TODO: Upload file to Supabase Storage
-        fileData = {
-          fileUrl: `assignments/submissions/${req.user.id}/${assignmentId}/v${Date.now()}-${req.file.originalname}`,
-          fileName: req.file.originalname,
-          fileSize: req.file.size,
-          mimeType: req.file.mimetype
-        };
-        
-        console.log('TODO: Upload submission file to Supabase Storage:', fileData);
+        try {
+          fileData = await uploadService.uploadSubmission(
+            req.file,
+            assignmentId,
+            req.user.id
+          );
+          
+          console.log('✅ Submission file uploaded:', fileData.fileUrl);
+        } catch (uploadError) {
+          console.error('❌ File upload failed:', uploadError);
+          return res.status(400).json({
+            success: false,
+            message: 'Gagal mengupload file: ' + uploadError.message
+          });
+        }
       }
 
       // Submit assignment
@@ -475,8 +659,7 @@ class AssignmentController {
         });
       }
 
-      // TODO: Implement grading logic in service
-      // For now, just update submission directly
+      // Update submission with grade
       const updatedSubmission = await prisma.submission.update({
         where: { id: parseInt(submissionId) },
         data: {
@@ -516,6 +699,39 @@ class AssignmentController {
       });
     }
   }
+
+}
+
+/**
+ * Calculate grade statistics (helper function)
+ */
+function calculateGradeStats(grades) {
+  if (grades.length === 0) {
+    return {
+      totalAssignments: 0,
+      averageScore: 0,
+      highestScore: 0,
+      lowestScore: 0,
+      averagePercentage: 0
+    };
+  }
+
+  const scores = grades.map(grade => grade.score);
+  const percentages = grades.map(grade => (grade.score / grade.maxScore) * 100);
+  
+  const totalAssignments = grades.length;
+  const averageScore = scores.reduce((sum, score) => sum + score, 0) / totalAssignments;
+  const highestScore = Math.max(...scores);
+  const lowestScore = Math.min(...scores);
+  const averagePercentage = percentages.reduce((sum, percentage) => sum + percentage, 0) / totalAssignments;
+
+  return {
+    totalAssignments,
+    averageScore: Math.round(averageScore * 100) / 100,
+    highestScore,
+    lowestScore,
+    averagePercentage: Math.round(averagePercentage * 100) / 100
+  };
 }
 
 module.exports = new AssignmentController();

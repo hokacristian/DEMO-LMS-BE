@@ -29,6 +29,28 @@ router.put('/:assignmentId/publish',
 );
 
 /**
+ * @route   GET /api/assignments/student/all
+ * @desc    Get all assignments from all student's classes
+ * @access  Private (Student only)
+ */
+router.get('/student/all', 
+  authenticate, 
+  requireStudent, 
+  assignmentController.getAllStudentAssignments
+);
+
+/**
+ * @route   GET /api/assignments/student/grades
+ * @desc    Get all graded assignments for student (NEW FEATURE)
+ * @access  Private (Student only)
+ */
+router.get('/student/grades', 
+  authenticate, 
+  requireStudent, 
+  assignmentController.getAllStudentGrades
+);
+
+/**
  * @route   GET /api/assignments/classes/:classId
  * @desc    Get assignments for a class
  * @access  Private (enrolled students or teaching teachers)
