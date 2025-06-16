@@ -180,7 +180,7 @@ class AssignmentController {
   }
 
   /**
-   * Get all assignments from all student's classes (NEW FEATURE)
+   * Get all assignments from all student's classes
    */
   async getAllStudentAssignments(req, res) {
     try {
@@ -262,7 +262,7 @@ class AssignmentController {
   }
 
   /**
-   * Get all graded assignments for student (NEW FEATURE)
+   * Get all graded assignments for student
    */
   async getAllStudentGrades(req, res) {
     try {
@@ -329,6 +329,52 @@ class AssignmentController {
       res.status(500).json({
         success: false,
         message: error.message || 'Gagal mengambil daftar nilai'
+      });
+    }
+  }
+
+  /**
+   * 🆕 NEW FEATURE: Get assignment grades for a specific class
+   * Endpoint untuk melihat nilai tugas di kelas tertentu
+   */
+  async getClassGrades(req, res) {
+    try {
+      const { classId } = req.params;
+
+      // Only students can use this endpoint
+      if (req.user.role !== 'STUDENT') {
+        return res.status(403).json({
+          success: false,
+          message: 'Endpoint ini hanya untuk siswa'
+        });
+      }
+
+      // Validate classId parameter
+      if (!classId || isNaN(parseInt(classId))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Class ID tidak valid'
+        });
+      }
+
+      // Get class grades
+      const result = await assignmentService.getClassGrades(classId, req.user.id);
+
+      res.json({
+        success: true,
+        message: 'Nilai tugas kelas berhasil diambil',
+        data: result
+      });
+    } catch (error) {
+      console.error('Get class grades error:', error.message);
+      
+      const statusCode = error.message.includes('tidak ditemukan') ? 404 :
+                        (error.message.includes('tidak memiliki akses') || 
+                         error.message.includes('tidak terdaftar')) ? 403 : 500;
+      
+      res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Gagal mengambil nilai tugas kelas'
       });
     }
   }

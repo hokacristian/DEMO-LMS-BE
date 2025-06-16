@@ -51,6 +51,17 @@ router.get('/student/grades',
 );
 
 /**
+ * 🆕 @route   GET /api/assignments/classes/:classId/grades
+ * @desc    Get assignment grades for a specific class (NEW FEATURE)
+ * @access  Private (Student only)
+ */
+router.get('/classes/:classId/grades', 
+  authenticate, 
+  requireStudent, 
+  assignmentController.getClassGrades
+);
+
+/**
  * @route   GET /api/assignments/classes/:classId
  * @desc    Get assignments for a class
  * @access  Private (enrolled students or teaching teachers)

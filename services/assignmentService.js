@@ -286,7 +286,7 @@ class AssignmentService {
   }
 
   /**
-   * Get all graded assignments for student (NEW FEATURE)
+   * Get all graded assignments for student
    */
   async getAllStudentGrades(studentId, options = {}) {
     const {
@@ -420,6 +420,159 @@ class AssignmentService {
     return {
       grades,
       total: totalCount
+    };
+  }
+
+  /**
+   * 🆕 NEW FEATURE: Get assignment grades for a specific class
+   * Method untuk mendapatkan nilai tugas di kelas tertentu
+   */
+  async getClassGrades(classId, studentId) {
+    // Verify student has access to this class
+    await this.verifyClassAccess(classId, studentId, 'STUDENT');
+
+    // Get class info
+    const classInfo = await prisma.class.findUnique({
+      where: { id: parseInt(classId) },
+      select: {
+        id: true,
+        name: true,
+        subject: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!classInfo) {
+      throw new Error('Kelas tidak ditemukan');
+    }
+
+    // Get all published assignments in this class
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        classId: parseInt(classId),
+        status: 'PUBLISHED'
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        submissions: {
+          where: {
+            studentId: parseInt(studentId),
+            isLatest: true
+          },
+          select: {
+            id: true,
+            score: true,
+            feedback: true,
+            submittedAt: true,
+            gradedAt: true,
+            isLate: true,
+            lateByMinutes: true,
+            status: true
+          }
+        }
+      },
+      orderBy: {
+        deadline: 'asc'
+      }
+    });
+
+    const now = new Date();
+    
+    // Format assignments with grade information
+    const assignmentGrades = assignments.map(assignment => {
+      const submission = assignment.submissions.length > 0 ? assignment.submissions[0] : null;
+      const hasSubmission = !!submission;
+      const isGraded = submission && submission.score !== null;
+      const isOverdue = now > assignment.deadline;
+      
+      let status = 'not_submitted';
+      if (hasSubmission && isGraded) {
+        status = 'graded';
+      } else if (hasSubmission && !isGraded) {
+        status = 'submitted_not_graded';
+      } else if (!hasSubmission && isOverdue) {
+        status = 'overdue';
+      } else if (!hasSubmission && !isOverdue) {
+        status = 'pending';
+      }
+
+      const result = {
+        assignment: {
+          id: assignment.id,
+          title: assignment.title,
+          description: assignment.description,
+          deadline: assignment.deadline,
+          maxScore: assignment.maxScore,
+          teacher: assignment.teacher
+        },
+        submission: {
+          hasSubmission,
+          isGraded,
+          submittedAt: submission?.submittedAt || null,
+          gradedAt: submission?.gradedAt || null,
+          isLate: submission?.isLate || false,
+          lateByMinutes: submission?.lateByMinutes || null
+        },
+        grade: {
+          score: submission?.score || null,
+          maxScore: assignment.maxScore,
+          percentage: isGraded ? Math.round((submission.score / assignment.maxScore) * 100 * 100) / 100 : null,
+          feedback: submission?.feedback || null
+        },
+        status,
+        computed: {
+          isOverdue: !hasSubmission && isOverdue,
+          daysUntilDeadline: Math.ceil((assignment.deadline - now) / (1000 * 60 * 60 * 24))
+        }
+      };
+
+      return result;
+    });
+
+    // Calculate statistics
+    const gradedAssignments = assignmentGrades.filter(ag => ag.grade.score !== null);
+    const totalAssignments = assignments.length;
+    const totalGraded = gradedAssignments.length;
+    const totalPending = assignments.length - totalGraded;
+    
+    let averageScore = 0;
+    let averagePercentage = 0;
+    let highestScore = 0;
+    let lowestScore = 0;
+
+    if (gradedAssignments.length > 0) {
+      const scores = gradedAssignments.map(ag => ag.grade.score);
+      const percentages = gradedAssignments.map(ag => ag.grade.percentage);
+      
+      averageScore = Math.round((scores.reduce((sum, score) => sum + score, 0) / scores.length) * 100) / 100;
+      averagePercentage = Math.round((percentages.reduce((sum, percentage) => sum + percentage, 0) / percentages.length) * 100) / 100;
+      highestScore = Math.max(...scores);
+      lowestScore = Math.min(...scores);
+    }
+
+    const statistics = {
+      totalAssignments,
+      totalGraded,
+      totalPending,
+      averageScore,
+      averagePercentage,
+      highestScore,
+      lowestScore
+    };
+
+    return {
+      class: classInfo,
+      assignments: assignmentGrades,
+      statistics
     };
   }
 

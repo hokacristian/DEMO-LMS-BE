@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-require('dotenv').config();
+require('dotenv').config()
+
+const { swaggerDocs } = require('./configs/swagger'); 
+;
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -23,7 +26,9 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
 
 ];
 // Middleware untuk mengizinkan CORS dengan credentials (cookies)
@@ -41,6 +46,8 @@ app.use(cors({
   methods: "GET,POST,PUT,DELETE,PATCH",
   allowedHeaders: "Content-Type,Authorization"
 }));
+
+swaggerDocs(app);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -73,6 +80,39 @@ app.use('/api/notifications', notificationRoutes);
 
 // Add multer error handling middleware
 app.use(handleMulterError);
+
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Welcome to HOKAV2 Learning Management System API!',
+    version: '2.0.0',
+    documentation: '/api-docs',
+    features: {
+      newFeatures: [
+        'Get grades from all classes: GET /api/assignments/classes/grades',
+        'Get grades for specific class: GET /api/assignments/classes/{classId}/grades'
+      ],
+      authentication: 'JWT Bearer Token',
+      fileUpload: 'Multipart form data supported',
+      realTimeNotifications: 'WebSocket notifications available'
+    },
+    endpoints: {
+      health: '/health',
+      documentation: '/api-docs',
+      auth: '/api/auth',
+      classes: '/api/classes',
+      assignments: '/api/assignments',
+      materials: '/api/materials',
+      notifications: '/api/notifications'
+    },
+    quickStart: {
+      step1: 'Register: POST /api/auth/register',
+      step2: 'Login: POST /api/auth/login',
+      step3: 'Use Bearer token in Authorization header',
+      step4: 'Explore API at /api-docs'
+    }
+  });
+});
 
 // Protected route example (untuk testing)
 app.get('/api/protected', authenticate, (req, res) => {
