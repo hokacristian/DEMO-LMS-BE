@@ -320,14 +320,6 @@ class MaterialController {
    */
   async getMaterialStats(req, res) {
     try {
-      // Only teachers can view their material stats
-      if (req.user.role !== 'TEACHER') {
-        return res.status(403).json({
-          success: false,
-          message: 'Hanya guru yang dapat melihat statistik materi'
-        });
-      }
-
       const stats = await materialService.getMaterialStats(req.user.id);
 
       res.json({
@@ -338,9 +330,31 @@ class MaterialController {
     } catch (error) {
       console.error('Get material stats error:', error.message);
       
-      res.status(500).json({
+      res.status(400).json({
         success: false,
         message: error.message || 'Gagal mengambil statistik materi'
+      });
+    }
+  }
+
+  /**
+   * Get all materials for logged-in student
+   */
+  async getAllMaterials(req, res) {
+    try {
+      const materials = await materialService.getAllMaterials(req.user.id, req.user.role);
+
+      res.json({
+        success: true,
+        message: 'Daftar materi berhasil diambil',
+        data: { materials }
+      });
+    } catch (error) {
+      console.error('Get all materials error:', error.message);
+      
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Gagal mengambil daftar materi'
       });
     }
   }

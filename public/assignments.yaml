@@ -1,872 +1,872 @@
-paths:
-  /assignments:
-    post:
-      summary: Create new assignment
-      description: Create a new assignment (Teacher only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - title
-                - description
-                - deadline
-                - classId
-              properties:
-                title:
-                  type: string
-                  minLength: 2
-                  maxLength: 200
-                  example: Tugas Integral
-                  description: Assignment title
-                description:
-                  type: string
-                  minLength: 10
-                  maxLength: 2000
-                  example: Mengerjakan soal integral definit dan tak definit
-                  description: Assignment description
-                instruction:
-                  type: string
-                  maxLength: 5000
-                  example: Kerjakan soal 1-10 pada halaman 45
-                  description: Assignment instructions
-                deadline:
-                  type: string
-                  format: date-time
-                  example: "2025-01-30T23:59:00.000Z"
-                  description: Assignment deadline
-                maxScore:
-                  type: integer
-                  minimum: 1
-                  maximum: 1000
-                  example: 100
-                  description: Maximum score for assignment
-                classId:
-                  type: integer
-                  example: 1
-                  description: Class ID where assignment belongs
-                attachment:
-                  type: string
-                  format: binary
-                  description: Optional attachment file
-      responses:
-        "201":
-          description: Assignment created successfully (DRAFT status)
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignment:
-                            $ref: "#/components/schemas/Assignment"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden - Only teachers can create assignments
-        "401":
-          description: Unauthorized
+# paths:
+#   /assignments:
+#     post:
+#       summary: Create new assignment
+#       description: Create a new assignment (Teacher only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       requestBody:
+#         required: true
+#         content:
+#           multipart/form-data:
+#             schema:
+#               type: object
+#               required:
+#                 - title
+#                 - description
+#                 - deadline
+#                 - classId
+#               properties:
+#                 title:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 200
+#                   example: Tugas Integral
+#                   description: Assignment title
+#                 description:
+#                   type: string
+#                   minLength: 10
+#                   maxLength: 2000
+#                   example: Mengerjakan soal integral definit dan tak definit
+#                   description: Assignment description
+#                 instruction:
+#                   type: string
+#                   maxLength: 5000
+#                   example: Kerjakan soal 1-10 pada halaman 45
+#                   description: Assignment instructions
+#                 deadline:
+#                   type: string
+#                   format: date-time
+#                   example: "2025-01-30T23:59:00.000Z"
+#                   description: Assignment deadline
+#                 maxScore:
+#                   type: integer
+#                   minimum: 1
+#                   maximum: 1000
+#                   example: 100
+#                   description: Maximum score for assignment
+#                 classId:
+#                   type: integer
+#                   example: 1
+#                   description: Class ID where assignment belongs
+#                 attachment:
+#                   type: string
+#                   format: binary
+#                   description: Optional attachment file
+#       responses:
+#         "201":
+#           description: Assignment created successfully (DRAFT status)
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignment:
+#                             $ref: "#/components/schemas/Assignment"
+#         "400":
+#           description: Bad request
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ErrorResponse"
+#         "403":
+#           description: Forbidden - Only teachers can create assignments
+#         "401":
+#           description: Unauthorized
 
-  /assignments/{assignmentId}/publish:
-    put:
-      summary: Publish assignment
-      description: Change assignment status from DRAFT to PUBLISHED (Teacher who created it)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      responses:
-        "200":
-          description: Assignment published successfully and notifications sent to students
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignment:
-                            $ref: "#/components/schemas/Assignment"
-        "400":
-          description: Bad request - Assignment already published or other error
-        "403":
-          description: Forbidden - Only assignment creator can publish
-        "404":
-          description: Assignment not found
+#   /assignments/{assignmentId}/publish:
+#     put:
+#       summary: Publish assignment
+#       description: Change assignment status from DRAFT to PUBLISHED (Teacher who created it)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Assignment published successfully and notifications sent to students
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignment:
+#                             $ref: "#/components/schemas/Assignment"
+#         "400":
+#           description: Bad request - Assignment already published or other error
+#         "403":
+#           description: Forbidden - Only assignment creator can publish
+#         "404":
+#           description: Assignment not found
 
-  /assignments/student/all:
-    get:
-      summary: Get all student assignments
-      description: Get all assignments from all student's classes with filtering and pagination
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [all, submitted, pending, overdue]
-            default: all
-          description: Filter by assignment status
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            enum: [deadline, created, class]
-            default: deadline
-          description: Sort assignments by
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: asc
-          description: Sort order
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-          description: Number of assignments per page
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number
-      responses:
-        "200":
-          description: All student assignments retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignments:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/Assignment"
-                          summary:
-                            type: object
-                            properties:
-                              total:
-                                type: integer
-                              submitted:
-                                type: integer
-                              pending:
-                                type: integer
-                              overdue:
-                                type: integer
-                              graded:
-                                type: integer
-                          filters:
-                            type: object
-                          pagination:
-                            type: object
-        "403":
-          description: Forbidden - Only students can use this endpoint
-        "500":
-          description: Internal server error
+#   /assignments/student/all:
+#     get:
+#       summary: Get all student assignments
+#       description: Get all assignments from all student's classes with filtering and pagination
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: status
+#           in: query
+#           schema:
+#             type: string
+#             enum: [all, submitted, pending, overdue]
+#             default: all
+#           description: Filter by assignment status
+#         - name: sortBy
+#           in: query
+#           schema:
+#             type: string
+#             enum: [deadline, created, class]
+#             default: deadline
+#           description: Sort assignments by
+#         - name: sortOrder
+#           in: query
+#           schema:
+#             type: string
+#             enum: [asc, desc]
+#             default: asc
+#           description: Sort order
+#         - name: limit
+#           in: query
+#           schema:
+#             type: integer
+#             minimum: 1
+#             maximum: 100
+#           description: Number of assignments per page
+#         - name: page
+#           in: query
+#           schema:
+#             type: integer
+#             minimum: 1
+#             default: 1
+#           description: Page number
+#       responses:
+#         "200":
+#           description: All student assignments retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignments:
+#                             type: array
+#                             items:
+#                               $ref: "#/components/schemas/Assignment"
+#                           summary:
+#                             type: object
+#                             properties:
+#                               total:
+#                                 type: integer
+#                               submitted:
+#                                 type: integer
+#                               pending:
+#                                 type: integer
+#                               overdue:
+#                                 type: integer
+#                               graded:
+#                                 type: integer
+#                           filters:
+#                             type: object
+#                           pagination:
+#                             type: object
+#         "403":
+#           description: Forbidden - Only students can use this endpoint
+#         "500":
+#           description: Internal server error
 
-  /assignments/student/grades:
-    get:
-      summary: Get all graded assignments for student
-      description: Get all graded assignments for student with filtering and pagination
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            enum: [grade, deadline, class, submitted]
-            default: deadline
-          description: Sort grades by
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-          description: Sort order
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-          description: Number of grades per page
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number
-        - name: classId
-          in: query
-          schema:
-            type: integer
-          description: Filter by specific class ID
-      responses:
-        "200":
-          description: Student grades retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          grades:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                id:
-                                  type: integer
-                                score:
-                                  type: integer
-                                maxScore:
-                                  type: integer
-                                percentage:
-                                  type: number
-                                feedback:
-                                  type: string
-                                submittedAt:
-                                  type: string
-                                  format: date-time
-                                gradedAt:
-                                  type: string
-                                  format: date-time
-                                isLate:
-                                  type: boolean
-                                assignment:
-                                  $ref: "#/components/schemas/Assignment"
-                          statistics:
-                            type: object
-                          filters:
-                            type: object
-                          pagination:
-                            type: object
-        "403":
-          description: Forbidden - Only students can use this endpoint
-        "500":
-          description: Internal server error
+#   /assignments/student/grades:
+#     get:
+#       summary: Get all graded assignments for student
+#       description: Get all graded assignments for student with filtering and pagination
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: sortBy
+#           in: query
+#           schema:
+#             type: string
+#             enum: [grade, deadline, class, submitted]
+#             default: deadline
+#           description: Sort grades by
+#         - name: sortOrder
+#           in: query
+#           schema:
+#             type: string
+#             enum: [asc, desc]
+#             default: desc
+#           description: Sort order
+#         - name: limit
+#           in: query
+#           schema:
+#             type: integer
+#             minimum: 1
+#             maximum: 100
+#           description: Number of grades per page
+#         - name: page
+#           in: query
+#           schema:
+#             type: integer
+#             minimum: 1
+#             default: 1
+#           description: Page number
+#         - name: classId
+#           in: query
+#           schema:
+#             type: integer
+#           description: Filter by specific class ID
+#       responses:
+#         "200":
+#           description: Student grades retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           grades:
+#                             type: array
+#                             items:
+#                               type: object
+#                               properties:
+#                                 id:
+#                                   type: integer
+#                                 score:
+#                                   type: integer
+#                                 maxScore:
+#                                   type: integer
+#                                 percentage:
+#                                   type: number
+#                                 feedback:
+#                                   type: string
+#                                 submittedAt:
+#                                   type: string
+#                                   format: date-time
+#                                 gradedAt:
+#                                   type: string
+#                                   format: date-time
+#                                 isLate:
+#                                   type: boolean
+#                                 assignment:
+#                                   $ref: "#/components/schemas/Assignment"
+#                           statistics:
+#                             type: object
+#                           filters:
+#                             type: object
+#                           pagination:
+#                             type: object
+#         "403":
+#           description: Forbidden - Only students can use this endpoint
+#         "500":
+#           description: Internal server error
 
-  /assignments/classes/grades:
-    get:
-      summary: Get assignment grades for ALL classes
-      description: 🆕 NEW FEATURE - Get assignment grades from all student's classes
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Assignment grades from all classes retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          classes:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                class:
-                                  $ref: "#/components/schemas/Class"
-                                assignments:
-                                  type: array
-                                  items:
-                                    type: object
-                                    properties:
-                                      assignment:
-                                        $ref: "#/components/schemas/Assignment"
-                                      submission:
-                                        type: object
-                                        properties:
-                                          hasSubmission:
-                                            type: boolean
-                                          isGraded:
-                                            type: boolean
-                                          submittedAt:
-                                            type: string
-                                            format: date-time
-                                          gradedAt:
-                                            type: string
-                                            format: date-time
-                                          isLate:
-                                            type: boolean
-                                          lateByMinutes:
-                                            type: integer
-                                      grade:
-                                        type: object
-                                        properties:
-                                          score:
-                                            type: integer
-                                          maxScore:
-                                            type: integer
-                                          percentage:
-                                            type: number
-                                          feedback:
-                                            type: string
-                                      status:
-                                        type: string
-                                        enum: [graded, submitted_not_graded, pending, overdue, not_submitted]
-                                        example: graded
-                                      computed:
-                                        type: object
-                                        properties:
-                                          isOverdue:
-                                            type: boolean
-                                          daysUntilDeadline:
-                                            type: integer
-                                statistics:
-                                  type: object
-                                  properties:
-                                    totalAssignments:
-                                      type: integer
-                                    totalGraded:
-                                      type: integer
-                                    totalPending:
-                                      type: integer
-                                    averageScore:
-                                      type: number
-                                    averagePercentage:
-                                      type: number
-                                    highestScore:
-                                      type: integer
-                                    lowestScore:
-                                      type: integer
-                          overallStatistics:
-                            type: object
-                            properties:
-                              totalClasses:
-                                type: integer
-                              totalAssignments:
-                                type: integer
-                              totalGraded:
-                                type: integer
-                              totalPending:
-                                type: integer
-                              overallAverageScore:
-                                type: number
-                              overallAveragePercentage:
-                                type: number
-        "403":
-          description: Forbidden - Only students can use this endpoint
-        "500":
-          description: Internal server error
+#   /assignments/classes/grades:
+#     get:
+#       summary: Get assignment grades for ALL classes
+#       description: 🆕 NEW FEATURE - Get assignment grades from all student's classes
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       responses:
+#         "200":
+#           description: Assignment grades from all classes retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           classes:
+#                             type: array
+#                             items:
+#                               type: object
+#                               properties:
+#                                 class:
+#                                   $ref: "#/components/schemas/Class"
+#                                 assignments:
+#                                   type: array
+#                                   items:
+#                                     type: object
+#                                     properties:
+#                                       assignment:
+#                                         $ref: "#/components/schemas/Assignment"
+#                                       submission:
+#                                         type: object
+#                                         properties:
+#                                           hasSubmission:
+#                                             type: boolean
+#                                           isGraded:
+#                                             type: boolean
+#                                           submittedAt:
+#                                             type: string
+#                                             format: date-time
+#                                           gradedAt:
+#                                             type: string
+#                                             format: date-time
+#                                           isLate:
+#                                             type: boolean
+#                                           lateByMinutes:
+#                                             type: integer
+#                                       grade:
+#                                         type: object
+#                                         properties:
+#                                           score:
+#                                             type: integer
+#                                           maxScore:
+#                                             type: integer
+#                                           percentage:
+#                                             type: number
+#                                           feedback:
+#                                             type: string
+#                                       status:
+#                                         type: string
+#                                         enum: [graded, submitted_not_graded, pending, overdue, not_submitted]
+#                                         example: graded
+#                                       computed:
+#                                         type: object
+#                                         properties:
+#                                           isOverdue:
+#                                             type: boolean
+#                                           daysUntilDeadline:
+#                                             type: integer
+#                                 statistics:
+#                                   type: object
+#                                   properties:
+#                                     totalAssignments:
+#                                       type: integer
+#                                     totalGraded:
+#                                       type: integer
+#                                     totalPending:
+#                                       type: integer
+#                                     averageScore:
+#                                       type: number
+#                                     averagePercentage:
+#                                       type: number
+#                                     highestScore:
+#                                       type: integer
+#                                     lowestScore:
+#                                       type: integer
+#                           overallStatistics:
+#                             type: object
+#                             properties:
+#                               totalClasses:
+#                                 type: integer
+#                               totalAssignments:
+#                                 type: integer
+#                               totalGraded:
+#                                 type: integer
+#                               totalPending:
+#                                 type: integer
+#                               overallAverageScore:
+#                                 type: number
+#                               overallAveragePercentage:
+#                                 type: number
+#         "403":
+#           description: Forbidden - Only students can use this endpoint
+#         "500":
+#           description: Internal server error
 
-  /assignments/classes/{classId}/grades:
-    get:
-      summary: Get assignment grades for specific class
-      description: 🆕 NEW FEATURE - Get assignment grades for a specific class
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Class assignment grades retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          class:
-                            $ref: "#/components/schemas/Class"
-                          assignments:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                assignment:
-                                  $ref: "#/components/schemas/Assignment"
-                                submission:
-                                  type: object
-                                  properties:
-                                    hasSubmission:
-                                      type: boolean
-                                    isGraded:
-                                      type: boolean
-                                    submittedAt:
-                                      type: string
-                                      format: date-time
-                                    gradedAt:
-                                      type: string
-                                      format: date-time
-                                    isLate:
-                                      type: boolean
-                                    lateByMinutes:
-                                      type: integer
-                                grade:
-                                  type: object
-                                  properties:
-                                    score:
-                                      type: integer
-                                    maxScore:
-                                      type: integer
-                                    percentage:
-                                      type: number
-                                    feedback:
-                                      type: string
-                                status:
-                                  type: string
-                                  enum: [graded, submitted_not_graded, pending, overdue, not_submitted]
-                                  example: graded
-                                computed:
-                                  type: object
-                                  properties:
-                                    isOverdue:
-                                      type: boolean
-                                    daysUntilDeadline:
-                                      type: integer
-                          statistics:
-                            type: object
-                            properties:
-                              totalAssignments:
-                                type: integer
-                              totalGraded:
-                                type: integer
-                              totalPending:
-                                type: integer
-                              averageScore:
-                                type: number
-                              averagePercentage:
-                                type: number
-                              highestScore:
-                                type: integer
-                              lowestScore:
-                                type: integer
-        "400":
-          description: Invalid class ID
-        "403":
-          description: Forbidden - Only students enrolled in this class can access
-        "404":
-          description: Class not found
-        "500":
-          description: Internal server error
+#   /assignments/classes/{classId}/grades:
+#     get:
+#       summary: Get assignment grades for specific class
+#       description: 🆕 NEW FEATURE - Get assignment grades for a specific class
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Class assignment grades retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           class:
+#                             $ref: "#/components/schemas/Class"
+#                           assignments:
+#                             type: array
+#                             items:
+#                               type: object
+#                               properties:
+#                                 assignment:
+#                                   $ref: "#/components/schemas/Assignment"
+#                                 submission:
+#                                   type: object
+#                                   properties:
+#                                     hasSubmission:
+#                                       type: boolean
+#                                     isGraded:
+#                                       type: boolean
+#                                     submittedAt:
+#                                       type: string
+#                                       format: date-time
+#                                     gradedAt:
+#                                       type: string
+#                                       format: date-time
+#                                     isLate:
+#                                       type: boolean
+#                                     lateByMinutes:
+#                                       type: integer
+#                                 grade:
+#                                   type: object
+#                                   properties:
+#                                     score:
+#                                       type: integer
+#                                     maxScore:
+#                                       type: integer
+#                                     percentage:
+#                                       type: number
+#                                     feedback:
+#                                       type: string
+#                                 status:
+#                                   type: string
+#                                   enum: [graded, submitted_not_graded, pending, overdue, not_submitted]
+#                                   example: graded
+#                                 computed:
+#                                   type: object
+#                                   properties:
+#                                     isOverdue:
+#                                       type: boolean
+#                                     daysUntilDeadline:
+#                                       type: integer
+#                           statistics:
+#                             type: object
+#                             properties:
+#                               totalAssignments:
+#                                 type: integer
+#                               totalGraded:
+#                                 type: integer
+#                               totalPending:
+#                                 type: integer
+#                               averageScore:
+#                                 type: number
+#                               averagePercentage:
+#                                 type: number
+#                               highestScore:
+#                                 type: integer
+#                               lowestScore:
+#                                 type: integer
+#         "400":
+#           description: Invalid class ID
+#         "403":
+#           description: Forbidden - Only students enrolled in this class can access
+#         "404":
+#           description: Class not found
+#         "500":
+#           description: Internal server error
 
-  /assignments/classes/{classId}:
-    get:
-      summary: Get assignments for a class
-      description: Get all assignments for a specific class
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Class assignments retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignments:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/Assignment"
-        "403":
-          description: Access denied - Not enrolled or teaching this class
-        "404":
-          description: Class not found
+#   /assignments/classes/{classId}:
+#     get:
+#       summary: Get assignments for a class
+#       description: Get all assignments for a specific class
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Class assignments retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignments:
+#                             type: array
+#                             items:
+#                               $ref: "#/components/schemas/Assignment"
+#         "403":
+#           description: Access denied - Not enrolled or teaching this class
+#         "404":
+#           description: Class not found
 
-  /assignments/{assignmentId}:
-    get:
-      summary: Get assignment details
-      description: Get detailed information about a specific assignment
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      responses:
-        "200":
-          description: Assignment details retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignment:
-                            allOf:
-                              - $ref: "#/components/schemas/Assignment"
-                              - type: object
-                                properties:
-                                  submissions:
-                                    type: array
-                                    items:
-                                      $ref: "#/components/schemas/Submission"
-        "403":
-          description: Access denied or assignment not published for students
-        "404":
-          description: Assignment not found
-        "500":
-          description: Internal server error
+#   /assignments/{assignmentId}:
+#     get:
+#       summary: Get assignment details
+#       description: Get detailed information about a specific assignment
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Assignment details retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignment:
+#                             allOf:
+#                               - $ref: "#/components/schemas/Assignment"
+#                               - type: object
+#                                 properties:
+#                                   submissions:
+#                                     type: array
+#                                     items:
+#                                       $ref: "#/components/schemas/Submission"
+#         "403":
+#           description: Access denied or assignment not published for students
+#         "404":
+#           description: Assignment not found
+#         "500":
+#           description: Internal server error
 
-    put:
-      summary: Update assignment
-      description: Update assignment information (Teacher who created it only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  minLength: 2
-                  maxLength: 200
-                  example: Updated Assignment Title
-                description:
-                  type: string
-                  minLength: 10
-                  maxLength: 2000
-                  example: Updated assignment description
-                instruction:
-                  type: string
-                  maxLength: 5000
-                  example: Updated instructions
-                deadline:
-                  type: string
-                  format: date-time
-                  example: "2025-02-15T23:59:00.000Z"
-                maxScore:
-                  type: integer
-                  minimum: 1
-                  maximum: 1000
-                  example: 100
-                attachment:
-                  type: string
-                  format: binary
-                  description: New attachment file
-              minProperties: 1
-      responses:
-        "200":
-          description: Assignment updated successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignment:
-                            $ref: "#/components/schemas/Assignment"
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - Only assignment creator can update
-        "404":
-          description: Assignment not found
+#     put:
+#       summary: Update assignment
+#       description: Update assignment information (Teacher who created it only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       requestBody:
+#         required: true
+#         content:
+#           multipart/form-data:
+#             schema:
+#               type: object
+#               properties:
+#                 title:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 200
+#                   example: Updated Assignment Title
+#                 description:
+#                   type: string
+#                   minLength: 10
+#                   maxLength: 2000
+#                   example: Updated assignment description
+#                 instruction:
+#                   type: string
+#                   maxLength: 5000
+#                   example: Updated instructions
+#                 deadline:
+#                   type: string
+#                   format: date-time
+#                   example: "2025-02-15T23:59:00.000Z"
+#                 maxScore:
+#                   type: integer
+#                   minimum: 1
+#                   maximum: 1000
+#                   example: 100
+#                 attachment:
+#                   type: string
+#                   format: binary
+#                   description: New attachment file
+#               minProperties: 1
+#       responses:
+#         "200":
+#           description: Assignment updated successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignment:
+#                             $ref: "#/components/schemas/Assignment"
+#         "400":
+#           description: Bad request
+#         "403":
+#           description: Forbidden - Only assignment creator can update
+#         "404":
+#           description: Assignment not found
 
-    delete:
-      summary: Delete assignment
-      description: Delete assignment (Teacher who created it only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      responses:
-        "200":
-          description: Assignment deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-        "403":
-          description: Forbidden - Only assignment creator can delete
-        "404":
-          description: Assignment not found
-        "500":
-          description: Internal server error
+#     delete:
+#       summary: Delete assignment
+#       description: Delete assignment (Teacher who created it only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Assignment deleted successfully
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ApiResponse"
+#         "403":
+#           description: Forbidden - Only assignment creator can delete
+#         "404":
+#           description: Assignment not found
+#         "500":
+#           description: Internal server error
 
-  /assignments/{assignmentId}/submit:
-    post:
-      summary: Submit assignment
-      description: Submit assignment solution (Student only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                content:
-                  type: string
-                  maxLength: 10000
-                  example: "Jawaban tugas integral: 1. Hasil integral dari..."
-                  description: Submission content/answer
-                file:
-                  type: string
-                  format: binary
-                  description: Optional submission file
-      responses:
-        "201":
-          description: Assignment submitted successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          submission:
-                            $ref: "#/components/schemas/Submission"
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - Only students can submit or not enrolled in class
-        "404":
-          description: Assignment not found or not published
+#   /assignments/{assignmentId}/submit:
+#     post:
+#       summary: Submit assignment
+#       description: Submit assignment solution (Student only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       requestBody:
+#         required: true
+#         content:
+#           multipart/form-data:
+#             schema:
+#               type: object
+#               properties:
+#                 content:
+#                   type: string
+#                   maxLength: 10000
+#                   example: "Jawaban tugas integral: 1. Hasil integral dari..."
+#                   description: Submission content/answer
+#                 file:
+#                   type: string
+#                   format: binary
+#                   description: Optional submission file
+#       responses:
+#         "201":
+#           description: Assignment submitted successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           submission:
+#                             $ref: "#/components/schemas/Submission"
+#         "400":
+#           description: Bad request
+#         "403":
+#           description: Forbidden - Only students can submit or not enrolled in class
+#         "404":
+#           description: Assignment not found or not published
 
-  /assignments/{assignmentId}/submissions:
-    get:
-      summary: Get assignment submissions
-      description: Get all submissions for an assignment (Teacher who created it only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Assignment ID
-          example: 1
-      responses:
-        "200":
-          description: Assignment submissions retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          assignment:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-                              title:
-                                type: string
-                              deadline:
-                                type: string
-                                format: date-time
-                              maxScore:
-                                type: integer
-                          submissions:
-                            type: array
-                            items:
-                              allOf:
-                                - $ref: "#/components/schemas/Submission"
-                                - type: object
-                                  properties:
-                                    student:
-                                      $ref: "#/components/schemas/User"
-        "403":
-          description: Forbidden - Only assignment creator can view submissions
-        "404":
-          description: Assignment not found
-        "500":
-          description: Internal server error
+#   /assignments/{assignmentId}/submissions:
+#     get:
+#       summary: Get assignment submissions
+#       description: Get all submissions for an assignment (Teacher who created it only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: assignmentId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Assignment ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Assignment submissions retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           assignment:
+#                             type: object
+#                             properties:
+#                               id:
+#                                 type: integer
+#                               title:
+#                                 type: string
+#                               deadline:
+#                                 type: string
+#                                 format: date-time
+#                               maxScore:
+#                                 type: integer
+#                           submissions:
+#                             type: array
+#                             items:
+#                               allOf:
+#                                 - $ref: "#/components/schemas/Submission"
+#                                 - type: object
+#                                   properties:
+#                                     student:
+#                                       $ref: "#/components/schemas/User"
+#         "403":
+#           description: Forbidden - Only assignment creator can view submissions
+#         "404":
+#           description: Assignment not found
+#         "500":
+#           description: Internal server error
 
-  /assignments/submissions/{submissionId}/grade:
-    put:
-      summary: Grade submission
-      description: Add grade and feedback to a submission (Teacher who created the assignment only)
-      tags:
-        - Assignments
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: submissionId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Submission ID
-          example: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - score
-              properties:
-                score:
-                  type: integer
-                  minimum: 0
-                  example: 85
-                  description: Score for the submission
-                feedback:
-                  type: string
-                  maxLength: 2000
-                  example: "Bagus! Tapi masih ada kesalahan di soal nomor 3"
-                  description: Feedback for the student
-      responses:
-        "200":
-          description: Submission graded successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          submission:
-                            allOf:
-                              - $ref: "#/components/schemas/Submission"
-                              - type: object
-                                properties:
-                                  student:
-                                    $ref: "#/components/schemas/User"
-                                  assignment:
-                                    type: object
-                                    properties:
-                                      title:
-                                        type: string
-                                      maxScore:
-                                        type: integer
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - Only assignment creator can grade
-        "404":
-          description: Submission not found
+#   /assignments/submissions/{submissionId}/grade:
+#     put:
+#       summary: Grade submission
+#       description: Add grade and feedback to a submission (Teacher who created the assignment only)
+#       tags:
+#         - Assignments
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: submissionId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Submission ID
+#           example: 1
+#       requestBody:
+#         required: true
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               required:
+#                 - score
+#               properties:
+#                 score:
+#                   type: integer
+#                   minimum: 0
+#                   example: 85
+#                   description: Score for the submission
+#                 feedback:
+#                   type: string
+#                   maxLength: 2000
+#                   example: "Bagus! Tapi masih ada kesalahan di soal nomor 3"
+#                   description: Feedback for the student
+#       responses:
+#         "200":
+#           description: Submission graded successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           submission:
+#                             allOf:
+#                               - $ref: "#/components/schemas/Submission"
+#                               - type: object
+#                                 properties:
+#                                   student:
+#                                     $ref: "#/components/schemas/User"
+#                                   assignment:
+#                                     type: object
+#                                     properties:
+#                                       title:
+#                                         type: string
+#                                       maxScore:
+#                                         type: integer
+#         "400":
+#           description: Bad request
+#         "403":
+#           description: Forbidden - Only assignment creator can grade
+#         "404":
+#           description: Submission not found

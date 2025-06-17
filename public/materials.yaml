@@ -1,338 +1,338 @@
-paths:
-  /materials:
-    post:
-      summary: Create new material
-      description: Create a new learning material (Teacher only)
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - title
-                - classId
-              properties:
-                title:
-                  type: string
-                  minLength: 2
-                  maxLength: 200
-                  example: Pengantar Integral
-                  description: Material title
-                description:
-                  type: string
-                  maxLength: 1000
-                  example: Materi pengantar tentang integral dan aplikasinya
-                  description: Material description
-                content:
-                  type: string
-                  maxLength: 10000
-                  example: "Integral adalah operasi matematika yang merupakan kebalikan dari diferensiasi..."
-                  description: Material content/text
-                classId:
-                  type: integer
-                  example: 1
-                  description: Class ID where material belongs
-                file:
-                  type: string
-                  format: binary
-                  description: Optional material file (PDF, docs, etc.)
-      responses:
-        "201":
-          description: Material created successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          material:
-                            $ref: "#/components/schemas/Material"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden - Only teachers can create materials
-        "401":
-          description: Unauthorized
+# paths:
+#   /materials:
+#     post:
+#       summary: Create new material
+#       description: Create a new learning material (Teacher only)
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       requestBody:
+#         required: true
+#         content:
+#           multipart/form-data:
+#             schema:
+#               type: object
+#               required:
+#                 - title
+#                 - classId
+#               properties:
+#                 title:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 200
+#                   example: Pengantar Integral
+#                   description: Material title
+#                 description:
+#                   type: string
+#                   maxLength: 1000
+#                   example: Materi pengantar tentang integral dan aplikasinya
+#                   description: Material description
+#                 content:
+#                   type: string
+#                   maxLength: 10000
+#                   example: "Integral adalah operasi matematika yang merupakan kebalikan dari diferensiasi..."
+#                   description: Material content/text
+#                 classId:
+#                   type: integer
+#                   example: 1
+#                   description: Class ID where material belongs
+#                 file:
+#                   type: string
+#                   format: binary
+#                   description: Optional material file (PDF, docs, etc.)
+#       responses:
+#         "201":
+#           description: Material created successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           material:
+#                             $ref: "#/components/schemas/Material"
+#         "400":
+#           description: Bad request
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ErrorResponse"
+#         "403":
+#           description: Forbidden - Only teachers can create materials
+#         "401":
+#           description: Unauthorized
 
-  /materials/classes/{classId}:
-    get:
-      summary: Get materials for a class
-      description: Get all learning materials for a specific class
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Class materials retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          materials:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/Material"
-        "403":
-          description: Access denied - Not enrolled or teaching this class
-        "404":
-          description: Class not found
+#   /materials/classes/{classId}:
+#     get:
+#       summary: Get materials for a class
+#       description: Get all learning materials for a specific class
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Class materials retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           materials:
+#                             type: array
+#                             items:
+#                               $ref: "#/components/schemas/Material"
+#         "403":
+#           description: Access denied - Not enrolled or teaching this class
+#         "404":
+#           description: Class not found
 
-  /materials/{materialId}:
-    get:
-      summary: Get material details
-      description: Get detailed information about a specific material
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: materialId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Material ID
-          example: 1
-      responses:
-        "200":
-          description: Material details retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          material:
-                            $ref: "#/components/schemas/Material"
-        "403":
-          description: Access denied - Not enrolled or teaching this class
-        "404":
-          description: Material not found
-        "500":
-          description: Internal server error
+#   /materials/{materialId}:
+#     get:
+#       summary: Get material details
+#       description: Get detailed information about a specific material
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: materialId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Material ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Material details retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           material:
+#                             $ref: "#/components/schemas/Material"
+#         "403":
+#           description: Access denied - Not enrolled or teaching this class
+#         "404":
+#           description: Material not found
+#         "500":
+#           description: Internal server error
 
-    put:
-      summary: Update material
-      description: Update material information (Teacher who created it only)
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: materialId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Material ID
-          example: 1
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  minLength: 2
-                  maxLength: 200
-                  example: Updated Material Title
-                  description: Updated material title
-                description:
-                  type: string
-                  maxLength: 1000
-                  example: Updated material description
-                  description: Updated material description
-                content:
-                  type: string
-                  maxLength: 10000
-                  example: Updated material content...
-                  description: Updated material content
-                file:
-                  type: string
-                  format: binary
-                  description: New material file
-              minProperties: 1
-      responses:
-        "200":
-          description: Material updated successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          material:
-                            $ref: "#/components/schemas/Material"
-        "400":
-          description: Bad request
-        "403":
-          description: Forbidden - Only material creator can update
-        "404":
-          description: Material not found
+#     put:
+#       summary: Update material
+#       description: Update material information (Teacher who created it only)
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: materialId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Material ID
+#           example: 1
+#       requestBody:
+#         required: true
+#         content:
+#           multipart/form-data:
+#             schema:
+#               type: object
+#               properties:
+#                 title:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 200
+#                   example: Updated Material Title
+#                   description: Updated material title
+#                 description:
+#                   type: string
+#                   maxLength: 1000
+#                   example: Updated material description
+#                   description: Updated material description
+#                 content:
+#                   type: string
+#                   maxLength: 10000
+#                   example: Updated material content...
+#                   description: Updated material content
+#                 file:
+#                   type: string
+#                   format: binary
+#                   description: New material file
+#               minProperties: 1
+#       responses:
+#         "200":
+#           description: Material updated successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           material:
+#                             $ref: "#/components/schemas/Material"
+#         "400":
+#           description: Bad request
+#         "403":
+#           description: Forbidden - Only material creator can update
+#         "404":
+#           description: Material not found
 
-    delete:
-      summary: Delete material
-      description: Delete material (Teacher who created it only)
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: materialId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Material ID
-          example: 1
-      responses:
-        "200":
-          description: Material deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-        "403":
-          description: Forbidden - Only material creator can delete
-        "404":
-          description: Material not found
-        "500":
-          description: Internal server error
+#     delete:
+#       summary: Delete material
+#       description: Delete material (Teacher who created it only)
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: materialId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Material ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Material deleted successfully
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ApiResponse"
+#         "403":
+#           description: Forbidden - Only material creator can delete
+#         "404":
+#           description: Material not found
+#         "500":
+#           description: Internal server error
 
-  /materials/{materialId}/download:
-    get:
-      summary: Download material file
-      description: Get download URL for material file
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: materialId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Material ID
-          example: 1
-      responses:
-        "200":
-          description: Download URL retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          downloadUrl:
-                            type: string
-                            example: "https://storage.supabase.co/object/public/materials/file.pdf"
-                            description: Direct download URL
-                          fileName:
-                            type: string
-                            example: "material.pdf"
-                            description: Original file name
-                          fileSize:
-                            type: integer
-                            example: 1024000
-                            description: File size in bytes
-                          mimeType:
-                            type: string
-                            example: "application/pdf"
-                            description: File MIME type
-        "403":
-          description: Access denied - Not enrolled or teaching this class
-        "404":
-          description: Material not found or no file available
-        "500":
-          description: Internal server error
+#   /materials/{materialId}/download:
+#     get:
+#       summary: Download material file
+#       description: Get download URL for material file
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: materialId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Material ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Download URL retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           downloadUrl:
+#                             type: string
+#                             example: "https://storage.supabase.co/object/public/materials/file.pdf"
+#                             description: Direct download URL
+#                           fileName:
+#                             type: string
+#                             example: "material.pdf"
+#                             description: Original file name
+#                           fileSize:
+#                             type: integer
+#                             example: 1024000
+#                             description: File size in bytes
+#                           mimeType:
+#                             type: string
+#                             example: "application/pdf"
+#                             description: File MIME type
+#         "403":
+#           description: Access denied - Not enrolled or teaching this class
+#         "404":
+#           description: Material not found or no file available
+#         "500":
+#           description: Internal server error
 
-  /materials/stats/teacher:
-    get:
-      summary: Get material statistics for teacher
-      description: Get statistics about materials created by the authenticated teacher
-      tags:
-        - Materials
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Teacher material statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          stats:
-                            type: object
-                            properties:
-                              totalMaterials:
-                                type: integer
-                                example: 15
-                                description: Total number of materials created
-                              materialsPerClass:
-                                type: array
-                                items:
-                                  type: object
-                                  properties:
-                                    classId:
-                                      type: integer
-                                      example: 1
-                                    _count:
-                                      type: object
-                                      properties:
-                                        id:
-                                          type: integer
-                                          example: 5
-                                description: Number of materials per class
-        "403":
-          description: Forbidden - Only teachers can view material statistics
-        "500":
-          description: Internal server error
+#   /materials/stats/teacher:
+#     get:
+#       summary: Get material statistics for teacher
+#       description: Get statistics about materials created by the authenticated teacher
+#       tags:
+#         - Materials
+#       security:
+#         - bearerAuth: []
+#       responses:
+#         "200":
+#           description: Teacher material statistics retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           stats:
+#                             type: object
+#                             properties:
+#                               totalMaterials:
+#                                 type: integer
+#                                 example: 15
+#                                 description: Total number of materials created
+#                               materialsPerClass:
+#                                 type: array
+#                                 items:
+#                                   type: object
+#                                   properties:
+#                                     classId:
+#                                       type: integer
+#                                       example: 1
+#                                     _count:
+#                                       type: object
+#                                       properties:
+#                                         id:
+#                                           type: integer
+#                                           example: 5
+#                                 description: Number of materials per class
+#         "403":
+#           description: Forbidden - Only teachers can view material statistics
+#         "500":
+#           description: Internal server error

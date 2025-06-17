@@ -64,4 +64,11 @@ router.get('/:materialId/download', authenticate, materialController.downloadMat
  */
 router.get('/stats/teacher', authenticate, requireTeacher, materialController.getMaterialStats);
 
+/**
+ * @route   GET /api/materials
+ * @desc    Get all materials for logged-in student
+ * @access  Private (Student only)
+ */
+router.get('/', authenticate, materialController.getAllMaterials);
+
 module.exports = router;

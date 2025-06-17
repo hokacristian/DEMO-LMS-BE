@@ -281,6 +281,82 @@ class MaterialService {
       materialsPerClass: stats
     };
   }
+
+  /**
+   * Get all materials for logged-in student
+   */
+  async getAllMaterials(userId, userRole) {
+    // If user is a teacher, get materials from classes they teach
+    if (userRole === 'TEACHER') {
+      const materials = await prisma.material.findMany({
+        where: {
+          teacherId: parseInt(userId)
+        },
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          class: {
+            select: {
+              id: true,
+              name: true,
+              subject: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      return materials;
+    }
+
+    // If user is a student, get materials from classes they are enrolled in
+    const materials = await prisma.material.findMany({
+      where: {
+        class: {
+          students: {
+            some: {
+              studentId: parseInt(userId)
+            }
+          }
+        }
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: {
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return materials;
+  }
 }
 
 module.exports = new MaterialService();

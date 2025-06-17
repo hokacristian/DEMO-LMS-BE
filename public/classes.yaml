@@ -1,341 +1,341 @@
-paths:
-  /classes:
-    post:
-      summary: Create new class
-      description: Create a new class (Teacher & Admin only)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-                - subjectId
-                - academicPeriodId
-              properties:
-                name:
-                  type: string
-                  minLength: 2
-                  maxLength: 100
-                  example: Matematika 12 IPA 1
-                  description: Class name
-                description:
-                  type: string
-                  maxLength: 500
-                  example: Kelas matematika untuk siswa IPA kelas 12
-                  description: Class description
-                subjectId:
-                  type: integer
-                  example: 1
-                  description: Subject ID
-                academicPeriodId:
-                  type: integer
-                  example: 1
-                  description: Academic Period ID
-      responses:
-        "201":
-          description: Class created successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          class:
-                            $ref: "#/components/schemas/Class"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden - Only teachers and admins can create classes
-        "401":
-          description: Unauthorized
+# paths:
+#   /classes:
+#     post:
+#       summary: Create new class
+#       description: Create a new class (Teacher & Admin only)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       requestBody:
+#         required: true
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               required:
+#                 - name
+#                 - subjectId
+#                 - academicPeriodId
+#               properties:
+#                 name:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 100
+#                   example: Matematika 12 IPA 1
+#                   description: Class name
+#                 description:
+#                   type: string
+#                   maxLength: 500
+#                   example: Kelas matematika untuk siswa IPA kelas 12
+#                   description: Class description
+#                 subjectId:
+#                   type: integer
+#                   example: 1
+#                   description: Subject ID
+#                 academicPeriodId:
+#                   type: integer
+#                   example: 1
+#                   description: Academic Period ID
+#       responses:
+#         "201":
+#           description: Class created successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           class:
+#                             $ref: "#/components/schemas/Class"
+#         "400":
+#           description: Bad request
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ErrorResponse"
+#         "403":
+#           description: Forbidden - Only teachers and admins can create classes
+#         "401":
+#           description: Unauthorized
 
-    get:
-      summary: Get user's classes
-      description: Get classes for the current user (different view for teacher vs student)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Classes retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          classes:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/Class"
-        "403":
-          description: Access denied
-        "500":
-          description: Internal server error
+#     get:
+#       summary: Get user's classes
+#       description: Get classes for the current user (different view for teacher vs student)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       responses:
+#         "200":
+#           description: Classes retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           classes:
+#                             type: array
+#                             items:
+#                               $ref: "#/components/schemas/Class"
+#         "403":
+#           description: Access denied
+#         "500":
+#           description: Internal server error
 
-  /classes/enroll:
-    post:
-      summary: Enroll student to class
-      description: Enroll student to class using enrollment code (Student only)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - enrollCode
-              properties:
-                enrollCode:
-                  type: string
-                  minLength: 6
-                  maxLength: 6
-                  example: MTK001
-                  description: Class enrollment code (6 characters)
-      responses:
-        "201":
-          description: Successfully enrolled to class
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          enrollment:
-                            type: object
-                          class:
-                            $ref: "#/components/schemas/Class"
-        "400":
-          description: Bad request - Invalid enrollment code or already enrolled
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden - Only students can enroll
-        "401":
-          description: Unauthorized
+#   /classes/enroll:
+#     post:
+#       summary: Enroll student to class
+#       description: Enroll student to class using enrollment code (Student only)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       requestBody:
+#         required: true
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               required:
+#                 - enrollCode
+#               properties:
+#                 enrollCode:
+#                   type: string
+#                   minLength: 6
+#                   maxLength: 6
+#                   example: MTK001
+#                   description: Class enrollment code (6 characters)
+#       responses:
+#         "201":
+#           description: Successfully enrolled to class
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           enrollment:
+#                             type: object
+#                           class:
+#                             $ref: "#/components/schemas/Class"
+#         "400":
+#           description: Bad request - Invalid enrollment code or already enrolled
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ErrorResponse"
+#         "403":
+#           description: Forbidden - Only students can enroll
+#         "401":
+#           description: Unauthorized
 
-  /classes/{classId}:
-    get:
-      summary: Get class details
-      description: Get detailed information about a specific class
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Class details retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          class:
-                            allOf:
-                              - $ref: "#/components/schemas/Class"
-                              - type: object
-                                properties:
-                                  teachers:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        teacher:
-                                          $ref: "#/components/schemas/User"
-                                  students:
-                                    type: array
-                                    items:
-                                      type: object
-                                      properties:
-                                        student:
-                                          $ref: "#/components/schemas/User"
-                                  _count:
-                                    type: object
-                                    properties:
-                                      materials:
-                                        type: integer
-                                      assignments:
-                                        type: integer
-                                      quizzes:
-                                        type: integer
-        "403":
-          description: Access denied - Not enrolled or teaching this class
-        "404":
-          description: Class not found
+#   /classes/{classId}:
+#     get:
+#       summary: Get class details
+#       description: Get detailed information about a specific class
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Class details retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           class:
+#                             allOf:
+#                               - $ref: "#/components/schemas/Class"
+#                               - type: object
+#                                 properties:
+#                                   teachers:
+#                                     type: array
+#                                     items:
+#                                       type: object
+#                                       properties:
+#                                         teacher:
+#                                           $ref: "#/components/schemas/User"
+#                                   students:
+#                                     type: array
+#                                     items:
+#                                       type: object
+#                                       properties:
+#                                         student:
+#                                           $ref: "#/components/schemas/User"
+#                                   _count:
+#                                     type: object
+#                                     properties:
+#                                       materials:
+#                                         type: integer
+#                                       assignments:
+#                                         type: integer
+#                                       quizzes:
+#                                         type: integer
+#         "403":
+#           description: Access denied - Not enrolled or teaching this class
+#         "404":
+#           description: Class not found
 
-    put:
-      summary: Update class
-      description: Update class information (Teacher who owns the class only)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                  minLength: 2
-                  maxLength: 100
-                  example: Matematika 12 IPA 2
-                  description: Updated class name
-                description:
-                  type: string
-                  maxLength: 500
-                  example: Updated class description
-                  description: Updated class description
-              minProperties: 1
-      responses:
-        "200":
-          description: Class updated successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          class:
-                            $ref: "#/components/schemas/Class"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden - Only teachers who own the class can update
-        "401":
-          description: Unauthorized
+#     put:
+#       summary: Update class
+#       description: Update class information (Teacher who owns the class only)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       requestBody:
+#         required: true
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 name:
+#                   type: string
+#                   minLength: 2
+#                   maxLength: 100
+#                   example: Matematika 12 IPA 2
+#                   description: Updated class name
+#                 description:
+#                   type: string
+#                   maxLength: 500
+#                   example: Updated class description
+#                   description: Updated class description
+#               minProperties: 1
+#       responses:
+#         "200":
+#           description: Class updated successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           class:
+#                             $ref: "#/components/schemas/Class"
+#         "400":
+#           description: Bad request
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ErrorResponse"
+#         "403":
+#           description: Forbidden - Only teachers who own the class can update
+#         "401":
+#           description: Unauthorized
 
-  /classes/{classId}/students:
-    get:
-      summary: Get class students
-      description: Get list of students in a class (Teacher only)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Students list retrieved successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          class:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-                              name:
-                                type: string
-                          students:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/User"
-        "403":
-          description: Forbidden - Only teachers can view student list
-        "404":
-          description: Class not found
+#   /classes/{classId}/students:
+#     get:
+#       summary: Get class students
+#       description: Get list of students in a class (Teacher only)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Students list retrieved successfully
+#           content:
+#             application/json:
+#               schema:
+#                 allOf:
+#                   - $ref: "#/components/schemas/ApiResponse"
+#                   - type: object
+#                     properties:
+#                       data:
+#                         type: object
+#                         properties:
+#                           class:
+#                             type: object
+#                             properties:
+#                               id:
+#                                 type: integer
+#                               name:
+#                                 type: string
+#                           students:
+#                             type: array
+#                             items:
+#                               $ref: "#/components/schemas/User"
+#         "403":
+#           description: Forbidden - Only teachers can view student list
+#         "404":
+#           description: Class not found
 
-  /classes/{classId}/leave:
-    delete:
-      summary: Leave class
-      description: Leave a class (Student only)
-      tags:
-        - Classes
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: classId
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Class ID
-          example: 1
-      responses:
-        "200":
-          description: Successfully left the class
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponse"
-        "403":
-          description: Forbidden - Only students can leave class
-        "404":
-          description: Not enrolled in this class
-        "500":
-          description: Internal server error
+#   /classes/{classId}/leave:
+#     delete:
+#       summary: Leave class
+#       description: Leave a class (Student only)
+#       tags:
+#         - Classes
+#       security:
+#         - bearerAuth: []
+#       parameters:
+#         - name: classId
+#           in: path
+#           required: true
+#           schema:
+#             type: integer
+#           description: Class ID
+#           example: 1
+#       responses:
+#         "200":
+#           description: Successfully left the class
+#           content:
+#             application/json:
+#               schema:
+#                 $ref: "#/components/schemas/ApiResponse"
+#         "403":
+#           description: Forbidden - Only students can leave class
+#         "404":
+#           description: Not enrolled in this class
+#         "500":
+#           description: Internal server error
