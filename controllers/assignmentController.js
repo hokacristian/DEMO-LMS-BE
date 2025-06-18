@@ -549,6 +549,553 @@ class AssignmentController {
   }
 
   /**
+ * 🆕 Get all assignments from all classes taught by teacher with submissions overview
+ */
+async getTeacherAssignmentsOverview(req, res) {
+  try {
+    // Only teachers can use this endpoint
+    if (req.user.role !== 'TEACHER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Endpoint ini hanya untuk guru'
+      });
+    }
+
+    // Validate query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const status = req.query.status || 'all'; // 'all', 'draft', 'published'
+    const sortBy = req.query.sortBy || 'deadline'; // 'deadline', 'created', 'class', 'submissions'
+    const sortOrder = req.query.sortOrder || 'desc';
+    const classId = req.query.classId; // Optional filter by specific class
+
+    const offset = (page - 1) * limit;
+
+    // Build where condition
+    const whereCondition = {
+      teacherId: parseInt(req.user.id),
+      ...(status !== 'all' && { status: status.toUpperCase() }),
+      ...(classId && { classId: parseInt(classId) })
+    };
+
+    // Build orderBy
+    let orderBy = {};
+    switch (sortBy) {
+      case 'created':
+        orderBy = { createdAt: sortOrder };
+        break;
+      case 'class':
+        orderBy = { class: { name: sortOrder } };
+        break;
+      case 'deadline':
+      default:
+        orderBy = { deadline: sortOrder };
+        break;
+    }
+
+    // Get assignments with submissions data
+    const assignments = await prisma.assignment.findMany({
+      where: whereCondition,
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: {
+                name: true
+              }
+            },
+            _count: {
+              select: {
+                students: true // Total students in class
+              }
+            }
+          }
+        },
+        _count: {
+          select: {
+            submissions: {
+              where: { isLatest: true }
+            }
+          }
+        },
+        submissions: {
+          where: { isLatest: true },
+          select: {
+            id: true,
+            studentId: true,
+            score: true,
+            status: true,
+            submittedAt: true,
+            isLate: true,
+            student: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      },
+      orderBy,
+      take: limit,
+      skip: offset
+    });
+
+    // Get total count for pagination
+    const totalCount = await prisma.assignment.count({
+      where: whereCondition
+    });
+
+    // Calculate submission statistics for each assignment
+    const assignmentsWithStats = assignments.map(assignment => {
+      const totalStudents = assignment.class._count.students;
+      const totalSubmissions = assignment._count.submissions;
+      const gradedSubmissions = assignment.submissions.filter(sub => sub.score !== null).length;
+      const lateSubmissions = assignment.submissions.filter(sub => sub.isLate).length;
+      const pendingGrading = assignment.submissions.filter(sub => sub.score === null).length;
+      
+      const submissionRate = totalStudents > 0 ? Math.round((totalSubmissions / totalStudents) * 100) : 0;
+      const gradingProgress = totalSubmissions > 0 ? Math.round((gradedSubmissions / totalSubmissions) * 100) : 0;
+
+      const now = new Date();
+      const isOverdue = now > assignment.deadline;
+      const daysUntilDeadline = Math.ceil((assignment.deadline - now) / (1000 * 60 * 60 * 24));
+
+      return {
+        id: assignment.id,
+        title: assignment.title,
+        description: assignment.description,
+        deadline: assignment.deadline,
+        maxScore: assignment.maxScore,
+        status: assignment.status,
+        createdAt: assignment.createdAt,
+        class: assignment.class,
+        statistics: {
+          totalStudents,
+          totalSubmissions,
+          gradedSubmissions,
+          lateSubmissions,
+          pendingGrading,
+          submissionRate,
+          gradingProgress,
+          isOverdue,
+          daysUntilDeadline
+        },
+        recentSubmissions: assignment.submissions
+          .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+          .slice(0, 5) // Last 5 submissions
+      };
+    });
+
+    // Calculate overall statistics
+    const overallStats = {
+      totalAssignments: totalCount,
+      totalSubmissions: assignmentsWithStats.reduce((sum, a) => sum + a.statistics.totalSubmissions, 0),
+      totalGraded: assignmentsWithStats.reduce((sum, a) => sum + a.statistics.gradedSubmissions, 0),
+      totalPendingGrading: assignmentsWithStats.reduce((sum, a) => sum + a.statistics.pendingGrading, 0),
+      overdueAssignments: assignmentsWithStats.filter(a => a.statistics.isOverdue).length
+    };
+
+    res.json({
+      success: true,
+      message: 'Overview tugas guru berhasil diambil',
+      data: {
+        assignments: assignmentsWithStats,
+        overallStatistics: overallStats,
+        filters: {
+          status,
+          sortBy,
+          sortOrder,
+          classId: classId || 'all'
+        },
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: (page * limit) < totalCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get teacher assignments overview error:', error.message);
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal mengambil overview tugas'
+    });
+  }
+}
+
+/**
+ * 🆕 Get all submissions from all assignments created by teacher
+ */
+async getAllTeacherSubmissions(req, res) {
+  try {
+    // Only teachers can use this endpoint
+    if (req.user.role !== 'TEACHER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Endpoint ini hanya untuk guru'
+      });
+    }
+
+    // Validate query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const status = req.query.status || 'all'; // 'all', 'submitted', 'graded', 'pending_grading'
+    const sortBy = req.query.sortBy || 'submitted'; // 'submitted', 'grade', 'student', 'assignment'
+    const sortOrder = req.query.sortOrder || 'desc';
+    const classId = req.query.classId; // Optional filter by specific class
+    const assignmentId = req.query.assignmentId; // Optional filter by specific assignment
+
+    const offset = (page - 1) * limit;
+
+    // Build where condition
+    const whereCondition = {
+      isLatest: true,
+      assignment: {
+        teacherId: parseInt(req.user.id),
+        ...(classId && { classId: parseInt(classId) }),
+        ...(assignmentId && { id: parseInt(assignmentId) })
+      }
+    };
+
+    // Add status filter
+    switch (status) {
+      case 'graded':
+        whereCondition.score = { not: null };
+        break;
+      case 'pending_grading':
+        whereCondition.score = null;
+        break;
+      case 'submitted':
+        whereCondition.status = 'SUBMITTED';
+        break;
+    }
+
+    // Build orderBy
+    let orderBy = {};
+    switch (sortBy) {
+      case 'grade':
+        orderBy = { score: sortOrder };
+        break;
+      case 'student':
+        orderBy = { student: { name: sortOrder } };
+        break;
+      case 'assignment':
+        orderBy = { assignment: { title: sortOrder } };
+        break;
+      case 'submitted':
+      default:
+        orderBy = { submittedAt: sortOrder };
+        break;
+    }
+
+    // Get submissions
+    const submissions = await prisma.submission.findMany({
+      where: whereCondition,
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            deadline: true,
+            maxScore: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                subject: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy,
+      take: limit,
+      skip: offset
+    });
+
+    // Get total count
+    const totalCount = await prisma.submission.count({
+      where: whereCondition
+    });
+
+    // Format submissions with additional data
+    const formattedSubmissions = submissions.map(submission => {
+      const percentage = submission.score ? 
+        Math.round((submission.score / submission.assignment.maxScore) * 100 * 100) / 100 : null;
+      
+      return {
+        id: submission.id,
+        version: submission.version,
+        content: submission.content,
+        score: submission.score,
+        maxScore: submission.assignment.maxScore,
+        percentage,
+        feedback: submission.feedback,
+        status: submission.status,
+        submittedAt: submission.submittedAt,
+        gradedAt: submission.gradedAt,
+        isLate: submission.isLate,
+        lateByMinutes: submission.lateByMinutes,
+        fileUrl: submission.fileUrl,
+        fileName: submission.fileName,
+        student: submission.student,
+        assignment: submission.assignment
+      };
+    });
+
+    res.json({
+      success: true,
+      message: 'Semua submissions berhasil diambil',
+      data: {
+        submissions: formattedSubmissions,
+        filters: {
+          status,
+          sortBy,
+          sortOrder,
+          classId: classId || 'all',
+          assignmentId: assignmentId || 'all'
+        },
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: (page * limit) < totalCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get all teacher submissions error:', error.message);
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal mengambil semua submissions'
+    });
+  }
+}
+
+/**
+ * 🆕 Get assignment statistics for teacher dashboard
+ */
+async getTeacherStatistics(req, res) {
+  try {
+    // Only teachers can use this endpoint
+    if (req.user.role !== 'TEACHER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Endpoint ini hanya untuk guru'
+      });
+    }
+
+    const teacherId = parseInt(req.user.id);
+
+    // Get basic assignment counts
+    const assignmentStats = await prisma.assignment.groupBy({
+      by: ['status'],
+      where: { teacherId },
+      _count: { id: true }
+    });
+
+    // Get submission statistics
+    const submissionStats = await prisma.submission.findMany({
+      where: {
+        assignment: { teacherId },
+        isLatest: true
+      },
+      select: {
+        score: true,
+        isLate: true,
+        assignment: {
+          select: {
+            maxScore: true,
+            classId: true
+          }
+        }
+      }
+    });
+
+    // Get class-wise statistics
+    const classStats = await prisma.assignment.groupBy({
+      by: ['classId'],
+      where: { teacherId },
+      _count: { id: true },
+      _avg: { maxScore: true }
+    });
+
+    // Get class details for class stats
+    const classDetails = await prisma.class.findMany({
+      where: {
+        id: {
+          in: classStats.map(cs => cs.classId)
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        subject: {
+          select: {
+            name: true
+          }
+        },
+        _count: {
+          select: {
+            students: true
+          }
+        }
+      }
+    });
+
+    // Calculate statistics
+    const totalAssignments = assignmentStats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const publishedAssignments = assignmentStats.find(s => s.status === 'PUBLISHED')?._count.id || 0;
+    const draftAssignments = assignmentStats.find(s => s.status === 'DRAFT')?._count.id || 0;
+    
+    const totalSubmissions = submissionStats.length;
+    const gradedSubmissions = submissionStats.filter(s => s.score !== null).length;
+    const lateSubmissions = submissionStats.filter(s => s.isLate).length;
+    const pendingGrading = totalSubmissions - gradedSubmissions;
+
+    // Calculate grade statistics
+    const gradedScores = submissionStats
+      .filter(s => s.score !== null)
+      .map(s => (s.score / s.assignment.maxScore) * 100);
+    
+    const averageGrade = gradedScores.length > 0 ? 
+      Math.round((gradedScores.reduce((sum, score) => sum + score, 0) / gradedScores.length) * 100) / 100 : 0;
+    
+    const highestGrade = gradedScores.length > 0 ? Math.max(...gradedScores) : 0;
+    const lowestGrade = gradedScores.length > 0 ? Math.min(...gradedScores) : 0;
+
+    // Format class statistics
+    const classStatistics = classStats.map(cs => {
+      const classDetail = classDetails.find(cd => cd.id === cs.classId);
+      const classSubmissions = submissionStats.filter(s => s.assignment.classId === cs.classId);
+      const classGraded = classSubmissions.filter(s => s.score !== null).length;
+      
+      return {
+        classId: cs.classId,
+        className: classDetail?.name || 'Unknown Class',
+        subjectName: classDetail?.subject?.name || 'Unknown Subject',
+        totalStudents: classDetail?._count?.students || 0,
+        totalAssignments: cs._count.id,
+        averageMaxScore: Math.round(cs._avg.maxScore || 0),
+        totalSubmissions: classSubmissions.length,
+        gradedSubmissions: classGraded,
+        gradingProgress: classSubmissions.length > 0 ? 
+          Math.round((classGraded / classSubmissions.length) * 100) : 0
+      };
+    });
+
+    // Recent activity (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentSubmissions = await prisma.submission.count({
+      where: {
+        assignment: { teacherId },
+        submittedAt: { gte: sevenDaysAgo },
+        isLatest: true
+      }
+    });
+
+    const recentAssignments = await prisma.assignment.count({
+      where: {
+        teacherId,
+        createdAt: { gte: sevenDaysAgo }
+      }
+    });
+
+    // Upcoming deadlines (next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+    const upcomingDeadlines = await prisma.assignment.findMany({
+      where: {
+        teacherId,
+        deadline: {
+          gte: new Date(),
+          lte: sevenDaysFromNow
+        },
+        status: 'PUBLISHED'
+      },
+      select: {
+        id: true,
+        title: true,
+        deadline: true,
+        class: {
+          select: {
+            name: true
+          }
+        },
+        _count: {
+          select: {
+            submissions: {
+              where: { isLatest: true }
+            }
+          }
+        }
+      },
+      orderBy: { deadline: 'asc' },
+      take: 5
+    });
+
+    res.json({
+      success: true,
+      message: 'Statistik guru berhasil diambil',
+      data: {
+        overview: {
+          totalAssignments,
+          publishedAssignments,
+          draftAssignments,
+          totalSubmissions,
+          gradedSubmissions,
+          pendingGrading,
+          lateSubmissions
+        },
+        gradeStatistics: {
+          averageGrade,
+          highestGrade,
+          lowestGrade,
+          totalGraded: gradedSubmissions
+        },
+        classStatistics,
+        recentActivity: {
+          recentSubmissions,
+          recentAssignments,
+          period: '7 hari terakhir'
+        },
+        upcomingDeadlines
+      }
+    });
+  } catch (error) {
+    console.error('Get teacher statistics error:', error.message);
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Gagal mengambil statistik guru'
+    });
+  }
+}
+
+  /**
    * Submit assignment (STUDENT only)
    */
   async submitAssignment(req, res) {

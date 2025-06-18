@@ -28,10 +28,11 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3001',
     'http://localhost:3000',
+    'https://lms-kelasmu-git-main-habibiramadhans-projects.vercel.app',
     'http://localhost:5174'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['*'],
   credentials: true
 };
 
@@ -51,6 +52,15 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("combined"));
 }
 
+
+
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/classes", classRoutes);
+app.use("/api/materials", materialRoutes);
+app.use("/api/assignments", assignmentRoutes);
+app.use("/api/notifications", notificationRoutes);
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
@@ -61,13 +71,6 @@ app.get("/health", (req, res) => {
     version: process.env.APP_VERSION || "1.0.0",
   });
 });
-
-// API Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/classes", classRoutes);
-app.use("/api/materials", materialRoutes);
-app.use("/api/assignments", assignmentRoutes);
-app.use("/api/notifications", notificationRoutes);
 
 // Add multer error handling middleware
 app.use(handleMulterError);

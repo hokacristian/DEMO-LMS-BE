@@ -947,6 +947,551 @@ class AssignmentService {
 
     return true;
   }
+
+  /**
+ * 🆕 Get teacher's classes with basic info (helper method)
+ */
+async getTeacherClasses(teacherId) {
+  const teacherClasses = await prisma.teacherClass.findMany({
+    where: { teacherId: parseInt(teacherId) },
+    include: {
+      class: {
+        select: {
+          id: true,
+          name: true,
+          subject: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          _count: {
+            select: {
+              students: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return teacherClasses.map(tc => tc.class);
+}
+
+/**
+ * 🆕 Get teacher assignment analytics
+ */
+async getTeacherAssignmentAnalytics(teacherId, dateRange = 30) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - dateRange);
+
+  // Get assignments created in date range
+  const assignments = await prisma.assignment.findMany({
+    where: {
+      teacherId: parseInt(teacherId),
+      createdAt: { gte: startDate }
+    },
+    include: {
+      class: {
+        select: {
+          id: true,
+          name: true,
+          subject: { select: { name: true } }
+        }
+      },
+      _count: {
+        select: {
+          submissions: { where: { isLatest: true } }
+        }
+      }
+    }
+  });
+
+  // Get submissions in date range
+  const submissions = await prisma.submission.findMany({
+    where: {
+      assignment: { teacherId: parseInt(teacherId) },
+      submittedAt: { gte: startDate },
+      isLatest: true
+    },
+    include: {
+      assignment: {
+        select: {
+          id: true,
+          title: true,
+          maxScore: true,
+          classId: true
+        }
+      }
+    }
+  });
+
+  // Calculate daily statistics
+  const dailyStats = {};
+  
+  for (let i = 0; i < dateRange; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    const dayAssignments = assignments.filter(a => 
+      a.createdAt.toISOString().split('T')[0] === dateStr
+    );
+    
+    const daySubmissions = submissions.filter(s => 
+      s.submittedAt.toISOString().split('T')[0] === dateStr
+    );
+
+    dailyStats[dateStr] = {
+      assignmentsCreated: dayAssignments.length,
+      submissionsReceived: daySubmissions.length,
+      lateSubmissions: daySubmissions.filter(s => s.isLate).length
+    };
+  }
+
+  return {
+    totalAssignments: assignments.length,
+    totalSubmissions: submissions.length,
+    averageSubmissionsPerAssignment: assignments.length > 0 ? 
+      Math.round((submissions.length / assignments.length) * 100) / 100 : 0,
+    dailyStatistics: dailyStats
+  };
+}
+
+/**
+ * 🆕 Get submission trends by class
+ */
+async getSubmissionTrendsByClass(teacherId) {
+  const classes = await this.getTeacherClasses(teacherId);
+  const trends = [];
+
+  for (const classData of classes) {
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        teacherId: parseInt(teacherId),
+        classId: classData.id,
+        status: 'PUBLISHED'
+      },
+      include: {
+        _count: {
+          select: {
+            submissions: { where: { isLatest: true } }
+          }
+        }
+      }
+    });
+
+    const submissions = await prisma.submission.findMany({
+      where: {
+        assignment: {
+          teacherId: parseInt(teacherId),
+          classId: classData.id
+        },
+        isLatest: true
+      },
+      select: {
+        score: true,
+        isLate: true,
+        submittedAt: true,
+        assignment: {
+          select: {
+            maxScore: true,
+            deadline: true
+          }
+        }
+      }
+    });
+
+    // Calculate class performance metrics
+    const totalAssignments = assignments.length;
+    const totalPossibleSubmissions = totalAssignments * classData._count.students;
+    const actualSubmissions = submissions.length;
+    const gradedSubmissions = submissions.filter(s => s.score !== null).length;
+    const lateSubmissions = submissions.filter(s => s.isLate).length;
+    
+    const submissionRate = totalPossibleSubmissions > 0 ? 
+      Math.round((actualSubmissions / totalPossibleSubmissions) * 100) : 0;
+    
+    const onTimeRate = actualSubmissions > 0 ? 
+      Math.round(((actualSubmissions - lateSubmissions) / actualSubmissions) * 100) : 0;
+
+    // Calculate average grade
+    const gradedScores = submissions
+      .filter(s => s.score !== null)
+      .map(s => (s.score / s.assignment.maxScore) * 100);
+    
+    const averageGrade = gradedScores.length > 0 ? 
+      Math.round((gradedScores.reduce((sum, score) => sum + score, 0) / gradedScores.length) * 100) / 100 : 0;
+
+    trends.push({
+      class: {
+        id: classData.id,
+        name: classData.name,
+        subject: classData.subject.name,
+        totalStudents: classData._count.students
+      },
+      metrics: {
+        totalAssignments,
+        submissionRate,
+        onTimeRate,
+        averageGrade,
+        totalSubmissions: actualSubmissions,
+        gradedSubmissions,
+        pendingGrading: actualSubmissions - gradedSubmissions
+      }
+    });
+  }
+
+  return trends;
+}
+
+/**
+ * 🆕 Get recent activities for teacher dashboard
+ */
+async getTeacherRecentActivities(teacherId, limit = 10) {
+  const activities = [];
+
+  // Recent submissions (last 7 days)
+  const recentSubmissions = await prisma.submission.findMany({
+    where: {
+      assignment: { teacherId: parseInt(teacherId) },
+      submittedAt: {
+        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      },
+      isLatest: true
+    },
+    include: {
+      student: {
+        select: { name: true }
+      },
+      assignment: {
+        select: {
+          title: true,
+          class: {
+            select: { name: true }
+          }
+        }
+      }
+    },
+    orderBy: { submittedAt: 'desc' },
+    take: limit
+  });
+
+  // Add submissions to activities
+  recentSubmissions.forEach(submission => {
+    activities.push({
+      type: 'submission',
+      timestamp: submission.submittedAt,
+      description: `${submission.student.name} mengumpulkan tugas "${submission.assignment.title}" di kelas ${submission.assignment.class.name}`,
+      isLate: submission.isLate,
+      data: {
+        submissionId: submission.id,
+        assignmentId: submission.assignmentId,
+        studentName: submission.student.name,
+        assignmentTitle: submission.assignment.title,
+        className: submission.assignment.class.name
+      }
+    });
+  });
+
+  // Recent assignments created (last 7 days)
+  const recentAssignments = await prisma.assignment.findMany({
+    where: {
+      teacherId: parseInt(teacherId),
+      createdAt: {
+        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      }
+    },
+    include: {
+      class: {
+        select: { name: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit
+  });
+
+  // Add assignments to activities
+  recentAssignments.forEach(assignment => {
+    activities.push({
+      type: 'assignment_created',
+      timestamp: assignment.createdAt,
+      description: `Tugas "${assignment.title}" dibuat untuk kelas ${assignment.class.name}`,
+      status: assignment.status,
+      data: {
+        assignmentId: assignment.id,
+        assignmentTitle: assignment.title,
+        className: assignment.class.name,
+        deadline: assignment.deadline
+      }
+    });
+  });
+
+  // Recent grading activities (last 7 days)
+  const recentGrading = await prisma.submission.findMany({
+    where: {
+      assignment: { teacherId: parseInt(teacherId) },
+      gradedAt: {
+        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      },
+      score: { not: null }
+    },
+    include: {
+      student: {
+        select: { name: true }
+      },
+      assignment: {
+        select: {
+          title: true,
+          maxScore: true,
+          class: {
+            select: { name: true }
+          }
+        }
+      }
+    },
+    orderBy: { gradedAt: 'desc' },
+    take: limit
+  });
+
+  // Add grading to activities
+  recentGrading.forEach(submission => {
+    const percentage = Math.round((submission.score / submission.assignment.maxScore) * 100);
+    activities.push({
+      type: 'grading',
+      timestamp: submission.gradedAt,
+      description: `Menilai submission ${submission.student.name} untuk "${submission.assignment.title}" (${submission.score}/${submission.assignment.maxScore} - ${percentage}%)`,
+      data: {
+        submissionId: submission.id,
+        studentName: submission.student.name,
+        assignmentTitle: submission.assignment.title,
+        className: submission.assignment.class.name,
+        score: submission.score,
+        maxScore: submission.assignment.maxScore,
+        percentage
+      }
+    });
+  });
+
+  // Sort all activities by timestamp and return limited results
+  return activities
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, limit);
+}
+
+/**
+ * 🆕 Get assignments that need attention (overdue, pending grading, etc.)
+ */
+async getAssignmentsNeedingAttention(teacherId) {
+  const now = new Date();
+  const alerts = [];
+
+  // Overdue assignments with pending submissions
+  const overdueAssignments = await prisma.assignment.findMany({
+    where: {
+      teacherId: parseInt(teacherId),
+      deadline: { lt: now },
+      status: 'PUBLISHED'
+    },
+    include: {
+      class: {
+        select: {
+          name: true,
+          _count: { select: { students: true } }
+        }
+      },
+      _count: {
+        select: {
+          submissions: { where: { isLatest: true } }
+        }
+      }
+    }
+  });
+
+  overdueAssignments.forEach(assignment => {
+    const submissionRate = (assignment._count.submissions / assignment.class._count.students) * 100;
+    if (submissionRate < 80) { // Less than 80% submission rate
+      alerts.push({
+        type: 'low_submission_rate',
+        priority: 'high',
+        assignmentId: assignment.id,
+        title: assignment.title,
+        className: assignment.class.name,
+        message: `Tingkat pengumpulan rendah (${Math.round(submissionRate)}%) untuk tugas yang sudah overdue`,
+        data: {
+          submissionRate: Math.round(submissionRate),
+          totalStudents: assignment.class._count.students,
+          totalSubmissions: assignment._count.submissions,
+          deadline: assignment.deadline
+        }
+      });
+    }
+  });
+
+  // Assignments with many pending grades
+  const pendingGradingAssignments = await prisma.assignment.findMany({
+    where: {
+      teacherId: parseInt(teacherId),
+      status: 'PUBLISHED',
+      submissions: {
+        some: {
+          isLatest: true,
+          score: null
+        }
+      }
+    },
+    include: {
+      class: { select: { name: true } },
+      _count: {
+        select: {
+          submissions: {
+            where: {
+              isLatest: true,
+              score: null
+            }
+          }
+        }
+      }
+    }
+  });
+
+  pendingGradingAssignments.forEach(assignment => {
+    if (assignment._count.submissions > 5) { // More than 5 pending grades
+      alerts.push({
+        type: 'pending_grading',
+        priority: 'medium',
+        assignmentId: assignment.id,
+        title: assignment.title,
+        className: assignment.class.name,
+        message: `${assignment._count.submissions} submission menunggu untuk dinilai`,
+        data: {
+          pendingCount: assignment._count.submissions
+        }
+      });
+    }
+  });
+
+  // Assignments with deadlines in next 24 hours
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const upcomingDeadlines = await prisma.assignment.findMany({
+    where: {
+      teacherId: parseInt(teacherId),
+      deadline: {
+        gte: now,
+        lte: tomorrow
+      },
+      status: 'PUBLISHED'
+    },
+    include: {
+      class: {
+        select: {
+          name: true,
+          _count: { select: { students: true } }
+        }
+      },
+      _count: {
+        select: {
+          submissions: { where: { isLatest: true } }
+        }
+      }
+    }
+  });
+
+  upcomingDeadlines.forEach(assignment => {
+    const submissionRate = (assignment._count.submissions / assignment.class._count.students) * 100;
+    alerts.push({
+      type: 'upcoming_deadline',
+      priority: submissionRate < 50 ? 'high' : 'low',
+      assignmentId: assignment.id,
+      title: assignment.title,
+      className: assignment.class.name,
+      message: `Deadline dalam 24 jam (tingkat pengumpulan: ${Math.round(submissionRate)}%)`,
+      data: {
+        deadline: assignment.deadline,
+        submissionRate: Math.round(submissionRate),
+        hoursLeft: Math.ceil((assignment.deadline - now) / (1000 * 60 * 60))
+      }
+    });
+  });
+
+  // Sort by priority (high -> medium -> low)
+  const priorityOrder = { high: 3, medium: 2, low: 1 };
+  return alerts.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+}
+
+/**
+ * 🆕 Get class performance comparison
+ */
+async getClassPerformanceComparison(teacherId) {
+  const classes = await this.getTeacherClasses(teacherId);
+  const comparison = [];
+
+  for (const classData of classes) {
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        teacherId: parseInt(teacherId),
+        classId: classData.id,
+        status: 'PUBLISHED'
+      }
+    });
+
+    const submissions = await prisma.submission.findMany({
+      where: {
+        assignment: {
+          teacherId: parseInt(teacherId),
+          classId: classData.id
+        },
+        isLatest: true,
+        score: { not: null }
+      },
+      select: {
+        score: true,
+        isLate: true,
+        assignment: {
+          select: {
+            maxScore: true
+          }
+        }
+      }
+    });
+
+    // Calculate metrics
+    const totalAssignments = assignments.length;
+    const totalPossibleSubmissions = totalAssignments * classData._count.students;
+    const actualGradedSubmissions = submissions.length;
+    
+    const averageGrade = submissions.length > 0 ? 
+      submissions.reduce((sum, s) => sum + ((s.score / s.assignment.maxScore) * 100), 0) / submissions.length : 0;
+    
+    const onTimeSubmissions = submissions.filter(s => !s.isLate).length;
+    const onTimeRate = submissions.length > 0 ? (onTimeSubmissions / submissions.length) * 100 : 0;
+    
+    const completionRate = totalPossibleSubmissions > 0 ? 
+      (actualGradedSubmissions / totalPossibleSubmissions) * 100 : 0;
+
+    comparison.push({
+      class: {
+        id: classData.id,
+        name: classData.name,
+        subject: classData.subject.name,
+        totalStudents: classData._count.students
+      },
+      performance: {
+        averageGrade: Math.round(averageGrade * 100) / 100,
+        completionRate: Math.round(completionRate * 100) / 100,
+        onTimeRate: Math.round(onTimeRate * 100) / 100,
+        totalAssignments,
+        totalGradedSubmissions: actualGradedSubmissions
+      }
+    });
+  }
+
+  // Sort by average grade (descending)
+  return comparison.sort((a, b) => b.performance.averageGrade - a.performance.averageGrade);
+}
+
 }
 
 module.exports = new AssignmentService();

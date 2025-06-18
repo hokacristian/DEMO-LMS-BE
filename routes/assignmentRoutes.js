@@ -29,6 +29,39 @@ router.put('/:assignmentId/publish',
 );
 
 /**
+ * 🆕 @route   GET /api/assignments/teacher/overview
+ * @desc    Get all assignments from all classes taught by teacher with submissions overview
+ * @access  Private (Teacher only)
+ */
+router.get('/teacher/overview', 
+  authenticate, 
+  requireTeacher, 
+  assignmentController.getTeacherAssignmentsOverview
+);
+
+/**
+ * 🆕 @route   GET /api/assignments/teacher/all-submissions
+ * @desc    Get all submissions from all assignments created by teacher
+ * @access  Private (Teacher only)
+ */
+router.get('/teacher/all-submissions', 
+  authenticate, 
+  requireTeacher, 
+  assignmentController.getAllTeacherSubmissions
+);
+
+/**
+ * 🆕 @route   GET /api/assignments/teacher/statistics
+ * @desc    Get assignment statistics for teacher dashboard
+ * @access  Private (Teacher only)
+ */
+router.get('/teacher/statistics', 
+  authenticate, 
+  requireTeacher, 
+  assignmentController.getTeacherStatistics
+);
+
+/**
  * @route   GET /api/assignments/student/all
  * @desc    Get all assignments from all student's classes
  * @access  Private (Student only)
